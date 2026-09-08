@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const leetcodeRoutes = require('./routes/leetcodeRoutes');
 const leaderboardRoutes = require('./routes/leaderboardRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const { testConnection } = require('./config/db');
 
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/leetcode', leetcodeRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 Not Found Handler
 app.use((req, res) => {

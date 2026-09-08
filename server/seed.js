@@ -21,7 +21,7 @@ async function runMigrationAndSeed() {
     await connection.query(`USE \`${dbName}\`;`);
 
     // Create users table if not exists
-    const createTableSQL = `
+    const createUsersTableSQL = `
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
@@ -33,9 +33,9 @@ async function runMigrationAndSeed() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `;
-    await connection.query(createTableSQL);
+    await connection.query(createUsersTableSQL);
 
-    // Idempotent Migration: Add V2/V4 columns if they do not exist
+    // Idempotent Migration: Add V2/V4 columns to users if they do not exist
     const columnsToEnsure = [
       { name: 'leetcode_total_solved', spec: 'INT DEFAULT 0' },
       { name: 'leetcode_easy_solved', spec: 'INT DEFAULT 0' },
@@ -58,6 +58,23 @@ async function runMigrationAndSeed() {
         await connection.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.spec};`);
       }
     }
+
+    // V6 Migration: Create leetcode_stats_history table if not exists
+    const createHistoryTableSQL = `
+      CREATE TABLE IF NOT EXISTS leetcode_stats_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        total_solved INT NOT NULL DEFAULT 0,
+        easy_solved INT NOT NULL DEFAULT 0,
+        medium_solved INT NOT NULL DEFAULT 0,
+        hard_solved INT NOT NULL DEFAULT 0,
+        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_recorded (user_id, recorded_at)
+      );
+    `;
+    await connection.query(createHistoryTableSQL);
+    console.log('[MIGRATION] Table leetcode_stats_history verified/created.');
 
     // Admin Seeding
     const adminEmail = (process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();

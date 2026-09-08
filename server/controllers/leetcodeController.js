@@ -1,6 +1,45 @@
 const { pool } = require('../config/db');
 const leetcodeService = require('../services/leetcodeService');
 
+/**
+ * Helper function to insert a stats history snapshot ONLY if stats have changed
+ * compared to the user's latest recorded snapshot in leetcode_stats_history.
+ */
+async function recordSnapshotIfChanged(userId, totalSolved, easySolved, mediumSolved, hardSolved) {
+  try {
+    const [latestSnapshots] = await pool.query(
+      `SELECT total_solved, easy_solved, medium_solved, hard_solved 
+       FROM leetcode_stats_history 
+       WHERE user_id = ? 
+       ORDER BY recorded_at DESC, id DESC 
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (latestSnapshots.length > 0) {
+      const latest = latestSnapshots[0];
+      if (
+        latest.total_solved === totalSolved &&
+        latest.easy_solved === easySolved &&
+        latest.medium_solved === mediumSolved &&
+        latest.hard_solved === hardSolved
+      ) {
+        // Skip duplicate snapshot insertion
+        return;
+      }
+    }
+
+    // Insert new snapshot
+    await pool.query(
+      `INSERT INTO leetcode_stats_history (user_id, total_solved, easy_solved, medium_solved, hard_solved)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, totalSolved, easySolved, mediumSolved, hardSolved]
+    );
+  } catch (err) {
+    console.error('Failed to record stats history snapshot:', err.message);
+  }
+}
+
 exports.connectLeetCode = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -40,6 +79,15 @@ exports.connectLeetCode = async (req, res) => {
         now,
         userId,
       ]
+    );
+
+    // Record historical snapshot if changed
+    await recordSnapshotIfChanged(
+      userId,
+      stats.totalSolved,
+      stats.easySolved,
+      stats.mediumSolved,
+      stats.hardSolved
     );
 
     return res.status(200).json({
@@ -106,6 +154,15 @@ exports.syncLeetCode = async (req, res) => {
         now,
         userId,
       ]
+    );
+
+    // Record historical snapshot if changed
+    await recordSnapshotIfChanged(
+      userId,
+      stats.totalSolved,
+      stats.easySolved,
+      stats.mediumSolved,
+      stats.hardSolved
     );
 
     return res.status(200).json({

@@ -51,6 +51,13 @@ const Navbar = () => {
             Leaderboard
           </Link>
 
+          <Link
+            to="/analytics"
+            className={`nav-item ${location.pathname === '/analytics' ? 'active' : ''}`}
+          >
+            Analytics
+          </Link>
+
           <button
             onClick={toggleTheme}
             className="theme-toggle-btn"

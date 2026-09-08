@@ -62,4 +62,15 @@ export const getMyActivity = async () => {
   return res.data;
 };
 
+// Analytics API helper methods
+export const getMyAnalytics = async () => {
+  const res = await api.get('/analytics/me');
+  return res.data;
+};
+
+export const getTeamAnalytics = async () => {
+  const res = await api.get('/analytics/team');
+  return res.data;
+};
+
 export default api;

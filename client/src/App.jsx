@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import MemberDashboard from './pages/MemberDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Leaderboard from './pages/Leaderboard';
+import Analytics from './pages/Analytics';
 
 // Root redirect handler based on role
 const HomeRedirect = () => {
@@ -59,6 +60,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <Leaderboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
               </ProtectedRoute>
             }
           />
