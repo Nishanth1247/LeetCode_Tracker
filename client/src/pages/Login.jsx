@@ -100,17 +100,6 @@ const Login = () => {
 
         {error && <div className="alert alert-error">{error}</div>}
 
-        {googleClientId && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div ref={googleBtnRef} style={{ width: '100%', minHeight: '40px' }}></div>
-            <div className="divider" style={{ display: 'flex', alignItems: 'center', textAlign: 'center', margin: '1.25rem 0', color: 'var(--muted)', fontSize: '0.85rem' }}>
-              <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
-              <span style={{ padding: '0 0.75rem' }}>OR</span>
-              <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
@@ -141,6 +130,37 @@ const Login = () => {
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
             {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
+
+          {googleClientId && (
+            <div style={{ marginTop: '1.25rem' }}>
+              <div
+                className="divider"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  marginBottom: '1.25rem',
+                  color: 'var(--muted)',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                }}
+              >
+                <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
+                <span style={{ padding: '0 0.75rem' }}>OR</span>
+                <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
+              </div>
+              <div
+                ref={googleBtnRef}
+                style={{
+                  width: '100%',
+                  minHeight: '40px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}
+              ></div>
+            </div>
+          )}
         </form>
 
         <div className="auth-footer">
