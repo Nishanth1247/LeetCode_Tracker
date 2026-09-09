@@ -11,6 +11,12 @@ import AdminDashboard from './pages/AdminDashboard';
 import Leaderboard from './pages/Leaderboard';
 import Analytics from './pages/Analytics';
 
+import Teams from './pages/Teams';
+import TeamDetails from './pages/TeamDetails';
+import Challenges from './pages/Challenges';
+import MyTeam from './pages/MyTeam';
+import AdminSolvedProblems from './pages/AdminSolvedProblems';
+
 // Root redirect handler based on role
 const HomeRedirect = () => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
@@ -48,10 +54,50 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/my-team"
+            element={
+              <ProtectedRoute>
+                <MyTeam />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/teams"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <Teams />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/teams/:id"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <TeamDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/challenges"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <Challenges />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/solved-problems"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminSolvedProblems />
               </ProtectedRoute>
             }
           />

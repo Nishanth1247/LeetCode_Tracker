@@ -90,6 +90,26 @@ exports.connectLeetCode = async (req, res) => {
       stats.hardSolved
     );
 
+    // V8.1: Sync initial submissions into leetcode_submissions
+    // Use ON DUPLICATE KEY UPDATE to repair any existing rows with NULL difficulty/language
+    try {
+      const historySubmissions = await leetcodeService.getAcceptedSubmissionHistory(stats.username);
+      for (const sub of historySubmissions) {
+        await pool.query(
+          `INSERT INTO leetcode_submissions 
+           (user_id, problem_title, problem_slug, difficulty, language, solved_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             difficulty = COALESCE(VALUES(difficulty), difficulty),
+             language = COALESCE(VALUES(language), language),
+             problem_title = COALESCE(VALUES(problem_title), problem_title)`,
+          [userId, sub.problemTitle, sub.problemSlug, sub.difficulty, sub.language, sub.solvedAt]
+        );
+      }
+    } catch (subErr) {
+      console.error('Non-fatal initial submission history sync error:', subErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'LeetCode profile connected successfully',
@@ -164,6 +184,26 @@ exports.syncLeetCode = async (req, res) => {
       stats.mediumSolved,
       stats.hardSolved
     );
+
+    // V8.1: Sync submissions into leetcode_submissions
+    // Use ON DUPLICATE KEY UPDATE to repair any existing rows with NULL difficulty/language
+    try {
+      const historySubmissions = await leetcodeService.getAcceptedSubmissionHistory(leetcodeUsername);
+      for (const sub of historySubmissions) {
+        await pool.query(
+          `INSERT INTO leetcode_submissions 
+           (user_id, problem_title, problem_slug, difficulty, language, solved_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             difficulty = COALESCE(VALUES(difficulty), difficulty),
+             language = COALESCE(VALUES(language), language),
+             problem_title = COALESCE(VALUES(problem_title), problem_title)`,
+          [userId, sub.problemTitle, sub.problemSlug, sub.difficulty, sub.language, sub.solvedAt]
+        );
+      }
+    } catch (subErr) {
+      console.error('Non-fatal submission history sync error:', subErr.message);
+    }
 
     return res.status(200).json({
       success: true,

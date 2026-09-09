@@ -43,21 +43,53 @@ const Navbar = () => {
 
         <nav className={`navbar-links ${menuOpen ? 'is-open' : ''}`}>
           {isAdmin ? (
-            <Link
-              to="/admin"
-              className={`nav-item ${location.pathname === '/admin' ? 'active' : ''}`}
-              onClick={closeMenu}
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                to="/admin"
+                className={`nav-item ${location.pathname === '/admin' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/admin/teams"
+                className={`nav-item ${location.pathname.startsWith('/admin/teams') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Teams
+              </Link>
+              <Link
+                to="/admin/challenges"
+                className={`nav-item ${location.pathname === '/admin/challenges' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Challenges
+              </Link>
+              <Link
+                to="/admin/solved-problems"
+                className={`nav-item ${location.pathname === '/admin/solved-problems' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Solved History
+              </Link>
+            </>
           ) : (
-            <Link
-              to="/dashboard"
-              className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
-              onClick={closeMenu}
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                to="/dashboard"
+                className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/my-team"
+                className={`nav-item ${location.pathname === '/my-team' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                My Team
+              </Link>
+            </>
           )}
 
           <Link

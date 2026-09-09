@@ -1,26 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { Link } from 'react-router-dom';
+import api, { getAllTeams, getAllChallenges } from '../services/api';
 
 const AdminDashboard = () => {
   const [members, setMembers] = useState([]);
+  const [teamsCount, setTeamsCount] = useState(0);
+  const [activeChallengesCount, setActiveChallengesCount] = useState(0);
+  const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchMembers();
+    fetchDashboardData();
   }, []);
 
-  const fetchMembers = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await api.get('/users');
-      if (res.data && res.data.success) {
-        setMembers(res.data.data);
+      const [usersRes, teamsRes, challengesRes] = await Promise.all([
+        api.get('/users'),
+        getAllTeams().catch(() => null),
+        getAllChallenges().catch(() => null),
+      ]);
+
+      if (usersRes.data && usersRes.data.success) {
+        setMembers(usersRes.data.data);
+      }
+
+      if (teamsRes && teamsRes.success) {
+        setTeamsCount(teamsRes.data.length);
+      }
+
+      if (challengesRes && challengesRes.success) {
+        const active = challengesRes.data.filter((c) => c.status === 'ACTIVE').length;
+        const completed = challengesRes.data.filter((c) => c.status === 'COMPLETED').length;
+        setActiveChallengesCount(active);
+        setCompletedChallengesCount(completed);
       }
     } catch (err) {
-      console.error('Failed to fetch members:', err);
-      setError(err.response?.data?.message || 'Failed to load team members.');
+      console.error('Failed to fetch dashboard data:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard.');
     } finally {
       setLoading(false);
     }
@@ -74,6 +94,34 @@ const AdminDashboard = () => {
         <div className="stat-summary-badge">
           <span>Total Team Members:</span>
           <strong>{members.length}</strong>
+        </div>
+      </div>
+
+      {/* V8 Teams & Challenges Summary Bar */}
+      <div className="stats-grid" style={{ padding: 0, marginBottom: '1rem' }}>
+        <div className="stat-box">
+          <span className="stat-title">Total Teams</span>
+          <span className="stat-number highlight-total">{teamsCount}</span>
+          <Link to="/admin/teams" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600, marginTop: '0.3rem' }}>
+            Manage Teams →
+          </Link>
+        </div>
+        <div className="stat-box">
+          <span className="stat-title">Active Challenges</span>
+          <span className="stat-number text-easy">{activeChallengesCount}</span>
+          <Link to="/admin/challenges" style={{ fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600, marginTop: '0.3rem' }}>
+            Manage Challenges →
+          </Link>
+        </div>
+        <div className="stat-box">
+          <span className="stat-title">Completed Challenges</span>
+          <span className="stat-number text-medium">{completedChallengesCount}</span>
+        </div>
+        <div className="stat-box">
+          <span className="stat-title">History Viewer</span>
+          <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none' }}>
+            Historical Solved →
+          </Link>
         </div>
       </div>
 

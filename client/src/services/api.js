@@ -90,4 +90,89 @@ export const getTeamAnalytics = async () => {
   return res.data;
 };
 
+// Teams API helpers
+export const getAllTeams = async () => {
+  const res = await api.get('/teams');
+  return res.data;
+};
+
+export const getTeamById = async (id) => {
+  const res = await api.get(`/teams/${id}`);
+  return res.data;
+};
+
+export const createTeam = async (data) => {
+  const res = await api.post('/teams', data);
+  return res.data;
+};
+
+export const updateTeam = async (id, data) => {
+  const res = await api.put(`/teams/${id}`, data);
+  return res.data;
+};
+
+export const deleteTeam = async (id) => {
+  const res = await api.delete(`/teams/${id}`);
+  return res.data;
+};
+
+export const addTeamMember = async (teamId, userId) => {
+  const res = await api.post(`/teams/${teamId}/members`, { userId });
+  return res.data;
+};
+
+export const removeTeamMember = async (teamId, userId) => {
+  const res = await api.delete(`/teams/${teamId}/members/${userId}`);
+  return res.data;
+};
+
+export const getMyTeam = async () => {
+  const res = await api.get('/teams/me');
+  return res.data;
+};
+
+// Challenges API helpers
+export const getAllChallenges = async () => {
+  const res = await api.get('/challenges');
+  return res.data;
+};
+
+export const getChallengeById = async (id) => {
+  const res = await api.get(`/challenges/${id}`);
+  return res.data;
+};
+
+export const createChallenge = async (data) => {
+  const res = await api.post('/challenges', data);
+  return res.data;
+};
+
+export const updateChallenge = async (id, data) => {
+  const res = await api.put(`/challenges/${id}`, data);
+  return res.data;
+};
+
+export const deleteChallenge = async (id) => {
+  const res = await api.delete(`/challenges/${id}`);
+  return res.data;
+};
+
+export const getMyChallenges = async () => {
+  const res = await api.get('/challenges/me');
+  return res.data;
+};
+
+export const getChallengeProgress = async (id) => {
+  const res = await api.get(`/challenges/${id}/progress`);
+  return res.data;
+};
+
+// Admin Submissions History helper
+export const getAdminSubmissions = async (userId, from, to) => {
+  const res = await api.get('/admin/submissions', {
+    params: { userId, from, to },
+  });
+  return res.data;
+};
+
 export default api;

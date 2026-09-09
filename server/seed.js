@@ -78,6 +78,73 @@ async function runMigrationAndSeed() {
     await connection.query(createHistoryTableSQL);
     console.log('[MIGRATION] Table leetcode_stats_history verified/created.');
 
+    // V8 Migration: Create teams, team_members, team_challenges tables if not exist
+    const createTeamsSQL = `
+      CREATE TABLE IF NOT EXISTS teams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        created_by INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `;
+    await connection.query(createTeamsSQL);
+    console.log('[MIGRATION] Table teams verified/created.');
+
+    const createTeamMembersSQL = `
+      CREATE TABLE IF NOT EXISTS team_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        team_id INT NOT NULL,
+        user_id INT NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+    `;
+    await connection.query(createTeamMembersSQL);
+    console.log('[MIGRATION] Table team_members verified/created.');
+
+    const createTeamChallengesSQL = `
+      CREATE TABLE IF NOT EXISTS team_challenges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        team_id INT NOT NULL,
+        title VARCHAR(150) NOT NULL,
+        description TEXT NULL,
+        difficulty ENUM('EASY','MEDIUM','HARD','MIXED') NOT NULL,
+        target INT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        status ENUM('ACTIVE','COMPLETED','EXPIRED') DEFAULT 'ACTIVE',
+        created_by INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_team_status (team_id, status)
+      );
+    `;
+    await connection.query(createTeamChallengesSQL);
+    console.log('[MIGRATION] Table team_challenges verified/created.');
+
+    // V8.1 Migration: Create leetcode_submissions table if not exists
+    const createSubmissionsSQL = `
+      CREATE TABLE IF NOT EXISTS leetcode_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        problem_title VARCHAR(255) NOT NULL,
+        problem_slug VARCHAR(255) NOT NULL,
+        difficulty ENUM('EASY','MEDIUM','HARD') NULL,
+        language VARCHAR(100) NULL,
+        solved_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_solved_at (user_id, solved_at),
+        INDEX idx_user_problem (user_id, problem_slug),
+        UNIQUE KEY uniq_user_problem_solved (user_id, problem_slug, solved_at)
+      );
+    `;
+    await connection.query(createSubmissionsSQL);
+    console.log('[MIGRATION] Table leetcode_submissions verified/created.');
+
     // Admin Seeding
     const adminEmail = (process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
