@@ -6,6 +6,7 @@ const MyTeam = () => {
   const [activeChallengeData, setActiveChallengeData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedChallengeId, setExpandedChallengeId] = useState(null);
 
   const fetchTeamAndProgress = async () => {
     try {
@@ -90,7 +91,7 @@ const MyTeam = () => {
         </div>
       </div>
 
-      {/* Notice Banner (Correction 1 & 4) */}
+      {/* Submission Tracking Notice */}
       <div
         style={{
           backgroundColor: 'var(--primary-subtle)',
@@ -106,7 +107,7 @@ const MyTeam = () => {
       >
         <span>ℹ️</span>
         <span>
-          <strong>Snapshot-Based Progress:</strong> Progress calculated from recorded LeetCode statistics snapshots.
+          <strong>Submission-Based Progress:</strong> Progress calculated from tracked LeetCode submission records within challenge timelines.
         </span>
       </div>
 
@@ -145,8 +146,14 @@ const MyTeam = () => {
             </div>
           ) : (
             activeChallengeData.map((data) => {
-              const { challenge, teamProgress, target, teamPercentage, status, membersProgress } =
-                data;
+              const { challenge, progress, difficultyBreakdown, status, membersProgress, problems } = data;
+              const isExpanded = expandedChallengeId === challenge.id;
+
+              // Calculate days remaining
+              const endDate = new Date(challenge.endDate);
+              const now = new Date();
+              const diffTime = endDate - now;
+              const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
               return (
                 <div key={challenge.id} className="card">
@@ -179,25 +186,32 @@ const MyTeam = () => {
                   </div>
 
                   <div className="card-body">
-                    {/* Difficulty & Dates */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--muted)' }}>
-                      <span>
+                    {/* Difficulty & Timeline Info */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '0.75rem' }}>
+                      <div>
                         Difficulty: <strong style={{ color: 'var(--text)' }}>{challenge.difficulty}</strong>
-                      </span>
-                      <span>
-                        Timeline: {new Date(challenge.startDate).toLocaleDateString()} – {new Date(challenge.endDate).toLocaleDateString()}
-                      </span>
+                      </div>
+                      <div>
+                        Target: <strong style={{ color: 'var(--text)' }}>{challenge.target}</strong>
+                      </div>
+                      <div>
+                        Timeline: <span style={{ color: 'var(--text)' }}>{new Date(challenge.startDate).toLocaleDateString()} – {new Date(challenge.endDate).toLocaleDateString()}</span>
+                      </div>
+                      {status === 'ACTIVE' && (
+                        <div>
+                          Days Left: <strong style={{ color: 'var(--primary)' }}>{daysRemaining} day{daysRemaining === 1 ? '' : 's'}</strong>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Team Aggregate Progress */}
+                    {/* Team Aggregate Progress Bar */}
                     <div style={{ marginTop: '0.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: '0.35rem' }}>
                         <span>Total Team Progress</span>
                         <span>
-                          {teamProgress} / {target} ({teamPercentage}%)
+                          {progress.solved} / {progress.target} solved ({progress.percentage}%)
                         </span>
                       </div>
-                      {/* Progress bar */}
                       <div
                         style={{
                           width: '100%',
@@ -209,7 +223,7 @@ const MyTeam = () => {
                       >
                         <div
                           style={{
-                            width: `${teamPercentage}%`,
+                            width: `${progress.percentage}%`,
                             height: '100%',
                             backgroundColor:
                               status === 'COMPLETED'
@@ -219,17 +233,26 @@ const MyTeam = () => {
                           }}
                         ></div>
                       </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem' }}>
+                        <span>Remaining: {progress.remaining}</span>
+                        {difficultyBreakdown && (
+                          <span>
+                            Breakdown: <span className="text-easy">{difficultyBreakdown.easy} Easy</span> | <span className="text-medium">{difficultyBreakdown.medium} Med</span> | <span className="text-hard">{difficultyBreakdown.hard} Hard</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Member Breakdown */}
-                    <div style={{ marginTop: '1rem' }}>
-                      <h4 className="activity-list-title">Member Progress Breakdown</h4>
+                    <div style={{ marginTop: '1.25rem' }}>
+                      <h4 className="activity-list-title">Member Progress</h4>
                       <div className="table-responsive">
                         <table className="data-table">
                           <thead>
                             <tr>
                               <th>Member</th>
-                              <th>LeetCode</th>
+                              <th>Solved</th>
+                              <th>Remaining</th>
                               <th>Progress</th>
                             </tr>
                           </thead>
@@ -237,15 +260,15 @@ const MyTeam = () => {
                             {membersProgress.map((m) => (
                               <tr key={m.userId}>
                                 <td className="font-semibold">{m.name}</td>
+                                <td>{m.solved}</td>
+                                <td>{m.remaining}</td>
                                 <td>
-                                  {m.username ? (
-                                    <span className="username-tag">@{m.username}</span>
-                                  ) : (
-                                    <span className="not-connected-tag">Not connected</span>
-                                  )}
-                                </td>
-                                <td className="font-semibold">
-                                  {m.progress} solved
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ flex: 1, height: '6px', backgroundColor: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                                      <div style={{ width: `${m.percentage}%`, height: '100%', backgroundColor: 'var(--primary)' }}></div>
+                                    </div>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{m.percentage}%</span>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -253,6 +276,78 @@ const MyTeam = () => {
                         </table>
                       </div>
                     </div>
+
+                    {/* Toggle View Contributed Problems */}
+                    <div style={{ marginTop: '1.25rem' }}>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.85rem', width: 'auto' }}
+                        onClick={() => setExpandedChallengeId(isExpanded ? null : challenge.id)}
+                      >
+                        {isExpanded ? 'Hide Contributed Problems ▲' : `View Contributed Problems (${problems.length}) ▼`}
+                      </button>
+
+                      {isExpanded && (
+                        <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                          <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Contributed Problems ({problems.length})</h4>
+                          {problems.length === 0 ? (
+                            <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                              No tracked submissions for this challenge yet.
+                            </p>
+                          ) : (
+                            <div className="table-responsive">
+                              <table className="data-table">
+                                <thead>
+                                  <tr>
+                                    <th>Member</th>
+                                    <th>Title</th>
+                                    <th>Difficulty</th>
+                                    <th>Language</th>
+                                    <th>Solved Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {problems.map((p, idx) => (
+                                    <tr key={idx}>
+                                      <td>{p.userName}</td>
+                                      <td className="font-semibold">{p.title}</td>
+                                      <td>
+                                        <span
+                                          className="status-badge"
+                                          style={{
+                                            backgroundColor:
+                                              p.difficulty === 'EASY'
+                                                ? 'rgba(16, 185, 129, 0.15)'
+                                                : p.difficulty === 'MEDIUM'
+                                                ? 'rgba(245, 158, 11, 0.15)'
+                                                : p.difficulty === 'HARD'
+                                                ? 'rgba(239, 68, 68, 0.15)'
+                                                : 'rgba(100, 116, 139, 0.15)',
+                                            color:
+                                              p.difficulty === 'EASY'
+                                                ? 'var(--status-easy)'
+                                                : p.difficulty === 'MEDIUM'
+                                                ? 'var(--status-medium)'
+                                                : p.difficulty === 'HARD'
+                                                ? 'var(--status-hard)'
+                                                : 'var(--muted)',
+                                          }}
+                                        >
+                                          {p.difficulty}
+                                        </span>
+                                      </td>
+                                      <td>{p.language}</td>
+                                      <td>{new Date(p.solvedAt).toLocaleDateString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               );

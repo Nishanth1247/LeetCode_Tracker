@@ -375,7 +375,7 @@ exports.getMyChallenges = async (req, res) => {
   }
 };
 
-// GET CHALLENGE PROGRESS (Correction 1, 2, 4, 5, 6, 7)
+// GET CHALLENGE PROGRESS (V8.2 Submission-Based with Snapshot Fallback)
 exports.getChallengeProgress = async (req, res) => {
   try {
     const { id } = req.params;
@@ -402,7 +402,7 @@ exports.getChallengeProgress = async (req, res) => {
 
     const challenge = challenges[0];
 
-    // MEMBER Authorization Pre-check (Correction 2)
+    // MEMBER Authorization Pre-check
     if (userRole === 'MEMBER') {
       const [memberAssignment] = await pool.query(
         'SELECT team_id FROM team_members WHERE user_id = ?',
@@ -427,94 +427,113 @@ exports.getChallengeProgress = async (req, res) => {
       [challenge.teamId]
     );
 
-    const diffCol = getDifficultyColumn(challenge.difficulty);
-    const userDiffCol = getUserDifficultyColumn(challenge.difficulty);
-
-    // Inclusive date string boundaries
     const startDateStr = new Date(challenge.startDate).toISOString().split('T')[0] + ' 00:00:00';
     const endDateStr = new Date(challenge.endDate).toISOString().split('T')[0] + ' 23:59:59';
     const todayStr = new Date().toISOString().split('T')[0];
     const challengeEndStr = new Date(challenge.endDate).toISOString().split('T')[0];
 
+    const teamUserIds = teamMembers.map((m) => m.id);
+
+    let calculationMethod = 'submission_based';
+    let submissionRows = [];
+
+    if (teamUserIds.length > 0) {
+      // Query submission history for team members within date window
+      const [subs] = await pool.query(
+        `SELECT id, user_id, problem_title as title, problem_slug as slug, difficulty, language, solved_at as solvedAt
+         FROM leetcode_submissions
+         WHERE user_id IN (?) AND solved_at >= ? AND solved_at <= ?
+         ORDER BY solved_at DESC`,
+        [teamUserIds, startDateStr, endDateStr]
+      );
+      submissionRows = subs;
+    }
+
     const membersProgress = [];
-    let teamProgressSum = 0;
+    let teamTotalSolved = 0;
+    const teamProblems = [];
+    const teamDifficultyBreakdown = { easy: 0, medium: 0, hard: 0 };
 
     for (const member of teamMembers) {
-      let memberProgress = 0;
+      // Filter submissions for this specific member
+      const memberSubs = submissionRows.filter((s) => s.user_id === member.id);
 
-      if (member.leetcodeUsername) {
-        // 1. Baseline snapshot on or before start_date 23:59:59
-        const [baselineRows] = await pool.query(
-          `SELECT ${diffCol} as solvedCount, recorded_at 
-           FROM leetcode_stats_history 
-           WHERE user_id = ? AND recorded_at <= ?
-           ORDER BY recorded_at DESC, id DESC 
-           LIMIT 1`,
-          [member.id, startDateStr]
-        );
+      // Deduplicate by problem_slug for member
+      const seenSlugs = new Set();
+      const uniqueMemberProbs = [];
+      let easyCount = 0;
+      let mediumCount = 0;
+      let hardCount = 0;
 
-        let baselineCount = null;
+      for (const sub of memberSubs) {
+        if (!seenSlugs.has(sub.slug)) {
+          seenSlugs.add(sub.slug);
 
-        if (baselineRows.length > 0) {
-          baselineCount = baselineRows[0].solvedCount;
-        } else {
-          // If no baseline snapshot on or before start_date, find earliest snapshot during challenge window
-          const [earliestWindowRows] = await pool.query(
-            `SELECT ${diffCol} as solvedCount 
-             FROM leetcode_stats_history 
-             WHERE user_id = ? AND recorded_at >= ? AND recorded_at <= ?
-             ORDER BY recorded_at ASC, id ASC 
-             LIMIT 1`,
-            [member.id, startDateStr, endDateStr]
-          );
+          const diff = sub.difficulty ? sub.difficulty.toUpperCase() : null;
+          let countsForChallenge = false;
 
-          if (earliestWindowRows.length > 0) {
-            baselineCount = earliestWindowRows[0].solvedCount;
+          if (challenge.difficulty === 'MIXED') {
+            countsForChallenge = true;
+          } else if (challenge.difficulty === diff) {
+            countsForChallenge = true;
           }
-        }
 
-        // 2. Latest snapshot on or before end_date 23:59:59 (or current stats if ongoing)
-        let latestCount = null;
+          if (diff === 'EASY') easyCount++;
+          if (diff === 'MEDIUM') mediumCount++;
+          if (diff === 'HARD') hardCount++;
 
-        const [latestRows] = await pool.query(
-          `SELECT ${diffCol} as solvedCount 
-           FROM leetcode_stats_history 
-           WHERE user_id = ? AND recorded_at <= ?
-           ORDER BY recorded_at DESC, id DESC 
-           LIMIT 1`,
-          [member.id, endDateStr]
-        );
-
-        if (latestRows.length > 0) {
-          latestCount = latestRows[0].solvedCount;
-        } else if (todayStr <= challengeEndStr) {
-          latestCount = member[userDiffCol] || 0;
-        }
-
-        // 3. Compute delta (clamped to zero)
-        if (baselineCount !== null && latestCount !== null) {
-          memberProgress = Math.max(0, latestCount - baselineCount);
-        } else {
-          memberProgress = 0;
+          if (countsForChallenge) {
+            uniqueMemberProbs.push({
+              title: sub.title,
+              slug: sub.slug,
+              difficulty: sub.difficulty || 'Unavailable',
+              language: sub.language || 'Unavailable',
+              solvedAt: new Date(sub.solvedAt).toISOString(),
+            });
+          }
         }
       }
 
-      teamProgressSum += memberProgress;
+      const memberSolved = uniqueMemberProbs.length;
+      teamTotalSolved += memberSolved;
+
+      teamDifficultyBreakdown.easy += easyCount;
+      teamDifficultyBreakdown.medium += mediumCount;
+      teamDifficultyBreakdown.hard += hardCount;
+
+      uniqueMemberProbs.forEach((p) => {
+        teamProblems.push({
+          ...p,
+          userId: member.id,
+          userName: member.name,
+        });
+      });
+
+      const memberPercentage = Math.min(100, Math.round((memberSolved / challenge.target) * 100));
 
       membersProgress.push({
         userId: member.id,
         name: member.name,
         username: member.leetcodeUsername,
-        progress: memberProgress,
+        solved: memberSolved,
+        target: challenge.target,
+        remaining: Math.max(0, challenge.target - memberSolved),
+        percentage: memberPercentage,
+        difficultyBreakdown: {
+          easy: easyCount,
+          medium: mediumCount,
+          hard: hardCount,
+        },
+        problems: uniqueMemberProbs,
       });
     }
 
-    // Sort members by progress descending
-    membersProgress.sort((a, b) => b.progress - a.progress);
+    // Sort members by solved descending
+    membersProgress.sort((a, b) => b.solved - a.solved);
 
-    // Compute dynamic challenge status (Correction 6)
+    // Compute dynamic challenge status
     let dynamicStatus = 'ACTIVE';
-    if (teamProgressSum >= challenge.target) {
+    if (teamTotalSolved >= challenge.target) {
       dynamicStatus = 'COMPLETED';
     } else if (todayStr > challengeEndStr) {
       dynamicStatus = 'EXPIRED';
@@ -522,7 +541,7 @@ exports.getChallengeProgress = async (req, res) => {
 
     const teamPercentage = Math.min(
       100,
-      Math.round((teamProgressSum / challenge.target) * 100)
+      Math.round((teamTotalSolved / challenge.target) * 100)
     );
 
     return res.status(200).json({
@@ -538,13 +557,19 @@ exports.getChallengeProgress = async (req, res) => {
           endDate: challenge.endDate,
           status: dynamicStatus,
           teamName: challenge.teamName,
+          teamId: challenge.teamId,
         },
-        teamProgress: teamProgressSum,
-        target: challenge.target,
-        teamPercentage,
+        calculationMethod,
+        progress: {
+          target: challenge.target,
+          solved: teamTotalSolved,
+          remaining: Math.max(0, challenge.target - teamTotalSolved),
+          percentage: teamPercentage,
+        },
+        difficultyBreakdown: teamDifficultyBreakdown,
         status: dynamicStatus,
-        calculationMethod: 'snapshot_based', // Correction 4
         membersProgress,
+        problems: teamProblems,
       },
     });
   } catch (error) {
