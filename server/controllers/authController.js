@@ -158,6 +158,15 @@ exports.googleAuth = async (req, res) => {
     }
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') {
+      console.warn('Google Auth attempt failed: GOOGLE_CLIENT_ID environment variable is not configured on the server.');
+      return res.status(500).json({
+        success: false,
+        message: 'Google authentication is not configured on the server.',
+      });
+    }
+
     const client = new OAuth2Client(googleClientId);
 
     // Verify ID token with google-auth-library
@@ -165,11 +174,11 @@ exports.googleAuth = async (req, res) => {
     try {
       const ticket = await client.verifyIdToken({
         idToken: credential,
-        audience: googleClientId || undefined,
+        audience: googleClientId,
       });
       payload = ticket.getPayload();
     } catch (verifyError) {
-      console.error('Google ID token verification failed:', verifyError.message);
+      console.error('Google ID token verification failed:', verifyError.message || verifyError);
       return res.status(400).json({
         success: false,
         message: 'Invalid or unverified Google token.',
@@ -178,6 +187,7 @@ exports.googleAuth = async (req, res) => {
 
     // Require verified Google email
     if (!payload || !payload.email_verified) {
+      console.warn('Google Auth rejected: Google email is not verified by Google.');
       return res.status(400).json({
         success: false,
         message: 'Unverified Google email account.',
