@@ -26,8 +26,7 @@ const Navbar = () => {
     <header className="navbar-header">
       <div className="navbar-container">
         <Link to={isAdmin ? '/admin' : '/dashboard'} className="navbar-brand" onClick={closeMenu}>
-          <span className="brand-icon">⚡</span>
-          <span className="brand-title">LeetCode Team Tracker</span>
+          <span className="brand-title">LeetCode Analyser</span>
           <span className={`role-badge ${isAdmin ? 'badge-admin' : 'badge-member'}`}>
             {user?.role}
           </span>
