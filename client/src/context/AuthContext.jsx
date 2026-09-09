@@ -49,6 +49,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Google Login handler (LOGIN ONLY for existing accounts)
+  const googleLogin = async (credential) => {
+    try {
+      const res = await api.post('/auth/google', { credential });
+      const { token: jwtToken, user: userData } = res.data;
+
+      localStorage.setItem('token', jwtToken);
+      setToken(jwtToken);
+      setUser(userData);
+
+      return res.data;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google authentication failed. Please try again.';
+      throw new Error(message);
+    }
+  };
+
   // Register handler
   const register = async (name, email, password) => {
     try {
@@ -75,6 +92,7 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         login,
+        googleLogin,
         register,
         logout,
         isAuthenticated: !!user,

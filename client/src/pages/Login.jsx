@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,9 +9,50 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const googleBtnRef = useRef(null);
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  const handleGoogleCallback = async (response) => {
+    if (!response.credential) return;
+    try {
+      setIsSubmitting(true);
+      setError('');
+      const data = await googleLogin(response.credential);
+      if (data.user.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      setError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (googleClientId && window.google?.accounts?.id && googleBtnRef.current) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCallback,
+        });
+
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: theme === 'dark' ? 'filled_black' : 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'continue_with',
+        });
+      } catch (e) {
+        console.error('Failed to render Google Sign-In button:', e);
+      }
+    }
+  }, [googleClientId, theme]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,6 +99,17 @@ const Login = () => {
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
+
+        {googleClientId && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div ref={googleBtnRef} style={{ width: '100%', minHeight: '40px' }}></div>
+            <div className="divider" style={{ display: 'flex', alignItems: 'center', textAlign: 'center', margin: '1.25rem 0', color: 'var(--muted)', fontSize: '0.85rem' }}>
+              <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
+              <span style={{ padding: '0 0.75rem' }}>OR</span>
+              <span style={{ flex: 1, borderBottom: '1px solid var(--border)' }}></span>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">

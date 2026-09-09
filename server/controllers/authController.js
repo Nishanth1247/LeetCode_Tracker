@@ -186,59 +186,50 @@ exports.googleAuth = async (req, res) => {
 
     const googleId = payload.sub;
     const cleanEmail = payload.email.trim().toLowerCase();
-    const name = payload.name || 'Google User';
 
-    // 1. Check if user exists by google_id
-    const [existingByGoogleId] = await pool.query(
-      'SELECT id, name, email, role, leetcode_username, leaderboard_opt_in FROM users WHERE google_id = ?',
-      [googleId]
+    // 1. Check if user exists by verified email
+    const [existingByEmail] = await pool.query(
+      'SELECT id, name, email, role, google_id, leetcode_username, leaderboard_opt_in FROM users WHERE email = ?',
+      [cleanEmail]
     );
 
-    let user;
+    if (existingByEmail.length === 0) {
+      // Reject login if email is not registered in the system. Do NOT create a user.
+      return res.status(401).json({
+        success: false,
+        message: 'This Google account is not registered. Please register using your email and password first.',
+      });
+    }
+
+    const foundUser = existingByEmail[0];
+
+    // Reject if google_id belongs to another account
+    if (foundUser.google_id && foundUser.google_id !== googleId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email account is already linked to another Google ID.',
+      });
+    }
+
+    // Check if this googleId is already linked to a DIFFERENT user in the database
+    const [existingByGoogleId] = await pool.query(
+      'SELECT id FROM users WHERE google_id = ? AND id != ?',
+      [googleId, foundUser.id]
+    );
 
     if (existingByGoogleId.length > 0) {
-      user = existingByGoogleId[0];
-    } else {
-      // 2. Check if user exists by verified email
-      const [existingByEmail] = await pool.query(
-        'SELECT id, name, email, role, google_id, leetcode_username, leaderboard_opt_in FROM users WHERE email = ?',
-        [cleanEmail]
-      );
-
-      if (existingByEmail.length > 0) {
-        const foundUser = existingByEmail[0];
-
-        // Reject if google_id belongs to another account
-        if (foundUser.google_id && foundUser.google_id !== googleId) {
-          return res.status(400).json({
-            success: false,
-            message: 'This email account is already linked to another Google ID.',
-          });
-        }
-
-        // Link google_id without overwriting password or reset settings
-        if (!foundUser.google_id) {
-          await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, foundUser.id]);
-        }
-
-        user = foundUser;
-      } else {
-        // 3. Create new user for Google login
-        const defaultPasswordHash = await bcrypt.hash('GOOGLE_AUTH_NO_PASSWORD_' + Date.now(), 10);
-
-        const [insertResult] = await pool.query(
-          'INSERT INTO users (name, email, password, role, google_id, leetcode_username, leaderboard_opt_in) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [name, cleanEmail, defaultPasswordHash, 'MEMBER', googleId, null, false]
-        );
-
-        const newUserId = insertResult.insertId;
-        const [newUserRows] = await pool.query(
-          'SELECT id, name, email, role, leetcode_username, leaderboard_opt_in FROM users WHERE id = ?',
-          [newUserId]
-        );
-        user = newUserRows[0];
-      }
+      return res.status(400).json({
+        success: false,
+        message: 'This Google ID is already linked to a different account.',
+      });
     }
+
+    // Safely link google_id if it is NULL, preserving existing password, role, name, email, etc.
+    if (!foundUser.google_id) {
+      await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, foundUser.id]);
+    }
+
+    const user = foundUser;
 
     // Issue application JWT token
     const token = jwt.sign(
