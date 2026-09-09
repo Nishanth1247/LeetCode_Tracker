@@ -35,8 +35,9 @@ async function runMigrationAndSeed() {
     `;
     await connection.query(createUsersTableSQL);
 
-    // Idempotent Migration: Add V2/V4 columns to users if they do not exist
+    // Idempotent Migration: Add V2/V4/V7 columns to users if they do not exist
     const columnsToEnsure = [
+      { name: 'google_id', spec: 'VARCHAR(255) NULL UNIQUE' },
       { name: 'leetcode_total_solved', spec: 'INT DEFAULT 0' },
       { name: 'leetcode_easy_solved', spec: 'INT DEFAULT 0' },
       { name: 'leetcode_medium_solved', spec: 'INT DEFAULT 0' },
@@ -45,6 +46,7 @@ async function runMigrationAndSeed() {
       { name: 'leetcode_ranking', spec: 'INT NULL DEFAULT NULL' },
       { name: 'leetcode_last_synced', spec: 'TIMESTAMP NULL DEFAULT NULL' },
       { name: 'leetcode_last_activity', spec: 'TIMESTAMP NULL DEFAULT NULL' },
+      { name: 'leaderboard_opt_in', spec: 'BOOLEAN NOT NULL DEFAULT FALSE' },
     ];
 
     for (const col of columnsToEnsure) {
@@ -87,8 +89,8 @@ async function runMigrationAndSeed() {
     } else {
       const hashedPassword = await bcrypt.hash(adminPassword, 10);
       await connection.query(
-        'INSERT INTO users (name, email, password, role, leetcode_username) VALUES (?, ?, ?, ?, ?)',
-        ['Admin User', adminEmail, hashedPassword, 'ADMIN', null]
+        'INSERT INTO users (name, email, password, role, leetcode_username, leaderboard_opt_in) VALUES (?, ?, ?, ?, ?, ?)',
+        ['Admin User', adminEmail, hashedPassword, 'ADMIN', null, false]
       );
       console.log(`[SUCCESS] Admin user '${adminEmail}' created successfully!`);
     }

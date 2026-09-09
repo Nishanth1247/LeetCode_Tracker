@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { getLeaderboard } from '../services/api';
 
 const Leaderboard = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,9 +52,14 @@ const Leaderboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-header-flex">
         <div>
-          <h1>Team Leaderboard</h1>
+          <h1>
+            Team Leaderboard
+            {isAdmin && <span className="role-badge badge-admin" style={{ marginLeft: '0.75rem', fontSize: '0.75rem' }}>Admin View — All connected members</span>}
+          </h1>
           <p className="welcome-subtitle">
-            Rankings based on connected team members' latest synced statistics
+            {isAdmin
+              ? 'Administrator view listing all connected team members'
+              : 'Rankings of team members who opted in to share their statistics'}
           </p>
         </div>
         <div className="stat-summary-badge">
@@ -73,9 +78,15 @@ const Leaderboard = () => {
       ) : leaderboard.length === 0 ? (
         <div className="card empty-state-card">
           <div className="empty-state">
-            <p>No connected team members yet.</p>
+            <p>
+              {isAdmin
+                ? 'No connected team members yet.'
+                : 'No team members have opted into leaderboard sharing yet.'}
+            </p>
             <span className="card-description">
-              Team members who connect their LeetCode profile will appear here.
+              {isAdmin
+                ? 'Connected team members will appear here.'
+                : 'You can enable your visibility in your Dashboard settings.'}
             </span>
           </div>
         </div>

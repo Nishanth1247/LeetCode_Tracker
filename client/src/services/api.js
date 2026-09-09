@@ -34,6 +34,12 @@ api.interceptors.response.use(
   }
 );
 
+// Google Login API helper
+export const loginWithGoogle = async (credential) => {
+  const res = await api.post('/auth/google', { credential });
+  return res.data;
+};
+
 // LeetCode API helper methods
 export const connectLeetCode = async (username) => {
   const res = await api.post('/leetcode/connect', { username });
@@ -53,6 +59,17 @@ export const getMyLeetCodeStats = async () => {
 // Leaderboard API helper method
 export const getLeaderboard = async () => {
   const res = await api.get('/leaderboard');
+  return res.data;
+};
+
+// Leaderboard Privacy helper methods
+export const getLeaderboardPrivacy = async () => {
+  const res = await api.get('/users/me/leaderboard-privacy');
+  return res.data;
+};
+
+export const updateLeaderboardPrivacy = async (leaderboardOptIn) => {
+  const res = await api.put('/users/me/leaderboard-privacy', { leaderboardOptIn });
   return res.data;
 };
 

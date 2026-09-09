@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getMyLeetCodeStats, connectLeetCode, syncLeetCode, getMyActivity } from '../services/api';
+import {
+  getMyLeetCodeStats,
+  connectLeetCode,
+  syncLeetCode,
+  getMyActivity,
+  getLeaderboardPrivacy,
+  updateLeaderboardPrivacy,
+} from '../services/api';
 
 const MemberDashboard = () => {
   const { user } = useAuth();
@@ -17,8 +24,14 @@ const MemberDashboard = () => {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
 
+  // Privacy Consent state
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
+  const [privacyLoading, setPrivacyLoading] = useState(false);
+  const [privacySuccessMsg, setPrivacySuccessMsg] = useState('');
+
   useEffect(() => {
     fetchStats();
+    fetchPrivacy();
   }, []);
 
   useEffect(() => {
@@ -40,6 +53,38 @@ const MemberDashboard = () => {
       setError('Failed to load LeetCode data. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPrivacy = async () => {
+    try {
+      const res = await getLeaderboardPrivacy();
+      if (res.success) {
+        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard privacy:', err);
+    }
+  };
+
+  const handlePrivacySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setPrivacyLoading(true);
+      setPrivacySuccessMsg('');
+      const res = await updateLeaderboardPrivacy(leaderboardOptIn);
+      if (res.success) {
+        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
+        setPrivacySuccessMsg(
+          leaderboardOptIn
+            ? 'Leaderboard visibility enabled! You will appear on the team leaderboard.'
+            : 'Leaderboard visibility disabled. You will not appear on the member leaderboard.'
+        );
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update privacy setting.');
+    } finally {
+      setPrivacyLoading(false);
     }
   };
 
@@ -98,7 +143,6 @@ const MemberDashboard = () => {
       if (res.success) {
         setStatsData(res.data);
         setSuccessMsg('Successfully synced LeetCode statistics!');
-        // Refresh activity after sync
         fetchActivity();
       }
     } catch (err) {
@@ -270,6 +314,45 @@ const MemberDashboard = () => {
           )}
         </div>
       )}
+
+      {/* V7 LEADERBOARD PRIVACY CONSENT SECTION */}
+      <div className="card privacy-section-card" style={{ marginTop: '1.5rem' }}>
+        <div className="card-header">
+          <h3>Leaderboard Visibility & Privacy</h3>
+        </div>
+        <div className="card-body">
+          {privacySuccessMsg && (
+            <div className="alert alert-success">
+              <span>✓ {privacySuccessMsg}</span>
+            </div>
+          )}
+          <p className="card-description">
+            When enabled, your LeetCode username and statistics can be viewed by other team members on the team leaderboard.
+          </p>
+          <form onSubmit={handlePrivacySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                checked={leaderboardOptIn}
+                onChange={(e) => setLeaderboardOptIn(e.target.checked)}
+                disabled={privacyLoading}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span>Show my LeetCode statistics on the team leaderboard.</span>
+            </label>
+            <div>
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                disabled={privacyLoading}
+                style={{ width: 'auto', padding: '0.5rem 1.2rem' }}
+              >
+                {privacyLoading ? 'Saving...' : 'Save Privacy Settings'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       {/* V4 RECENT LEETCODE ACTIVITY SECTION */}
       {statsData?.username && (

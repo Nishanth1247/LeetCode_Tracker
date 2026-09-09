@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -8,18 +8,24 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (!isAuthenticated) return null;
 
   const handleLogout = () => {
+    setMenuOpen(false);
     logout();
     navigate('/login');
+  };
+
+  const closeMenu = () => {
+    setMenuOpen(false);
   };
 
   return (
     <header className="navbar-header">
       <div className="navbar-container">
-        <Link to={isAdmin ? '/admin' : '/dashboard'} className="navbar-brand">
+        <Link to={isAdmin ? '/admin' : '/dashboard'} className="navbar-brand" onClick={closeMenu}>
           <span className="brand-icon">⚡</span>
           <span className="brand-title">LeetCode Team Tracker</span>
           <span className={`role-badge ${isAdmin ? 'badge-admin' : 'badge-member'}`}>
@@ -27,11 +33,20 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <nav className="navbar-links">
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle navigation menu"
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
+
+        <nav className={`navbar-links ${menuOpen ? 'is-open' : ''}`}>
           {isAdmin ? (
             <Link
               to="/admin"
               className={`nav-item ${location.pathname === '/admin' ? 'active' : ''}`}
+              onClick={closeMenu}
             >
               Dashboard
             </Link>
@@ -39,6 +54,7 @@ const Navbar = () => {
             <Link
               to="/dashboard"
               className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+              onClick={closeMenu}
             >
               Dashboard
             </Link>
@@ -47,6 +63,7 @@ const Navbar = () => {
           <Link
             to="/leaderboard"
             className={`nav-item ${location.pathname === '/leaderboard' ? 'active' : ''}`}
+            onClick={closeMenu}
           >
             Leaderboard
           </Link>
@@ -54,6 +71,7 @@ const Navbar = () => {
           <Link
             to="/analytics"
             className={`nav-item ${location.pathname === '/analytics' ? 'active' : ''}`}
+            onClick={closeMenu}
           >
             Analytics
           </Link>
