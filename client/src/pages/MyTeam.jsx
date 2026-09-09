@@ -86,7 +86,7 @@ const MyTeam = () => {
           <p className="welcome-subtitle">Your Team Dashboard & Challenges</p>
         </div>
         <div className="stat-summary-badge">
-          <span>Roster:</span>
+          <span>Members:</span>
           <strong>{team.members.length} Members</strong>
         </div>
       </div>
@@ -116,7 +116,7 @@ const MyTeam = () => {
         {/* Roster Card */}
         <div className="card">
           <div className="card-header">
-            <h3>Team Roster ({team.members.length})</h3>
+            <h3>Team Members ({team.members.length})</h3>
           </div>
           <div className="card-body">
             <ul className="activity-list">

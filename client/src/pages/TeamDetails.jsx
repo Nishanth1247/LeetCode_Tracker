@@ -301,7 +301,7 @@ const TeamDetails = () => {
         {/* Members List */}
         <div className="card">
           <div className="card-header">
-            <h3>Team Roster ({team.members.length})</h3>
+            <h3>Team Members ({team.members.length})</h3>
           </div>
           <div className="card-body">
             {/* Add Member Form */}

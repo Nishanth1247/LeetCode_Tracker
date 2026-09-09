@@ -215,7 +215,7 @@ const Teams = () => {
               </div>
               <div className="card-footer" style={{ display: 'flex', gap: '0.5rem' }}>
                 <Link to={`/admin/teams/${t.id}`} className="btn btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>
-                  Manage Roster & Challenges
+                  Manage Team & Challenges
                 </Link>
                 <button
                   onClick={() => handleDeleteTeam(t.id, t.name)}
