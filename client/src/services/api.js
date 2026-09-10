@@ -169,9 +169,17 @@ export const getChallengeProgress = async (id) => {
 
 // Admin Submissions History helper
 export const getAdminSubmissions = async (userId, from, to) => {
-  const res = await api.get('/admin/submissions', {
-    params: { userId, from, to },
-  });
+  const res = await api.get(`/admin/submissions?userId=${userId}&from=${from}&to=${to}`);
+  return res.data;
+};
+
+export const getAdminStreaks = async () => {
+  const res = await api.get('/admin/streaks');
+  return res.data;
+};
+
+export const getAdminMemberStreakDetail = async (userId) => {
+  const res = await api.get(`/admin/streaks/${userId}`);
   return res.data;
 };
 

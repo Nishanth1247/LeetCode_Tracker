@@ -82,7 +82,7 @@ const MyTeam = () => {
       {/* Header */}
       <div className="dashboard-header-flex">
         <div>
-          <h1 className="text-2xl font-bold"> {team.name}</h1>
+          <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="welcome-subtitle">Your Team Dashboard & Challenges</p>
         </div>
         <div className="stat-summary-badge">

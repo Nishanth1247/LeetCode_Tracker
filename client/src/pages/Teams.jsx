@@ -200,7 +200,7 @@ const Teams = () => {
           {teams.map((t) => (
             <div key={t.id} className="card">
               <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3>⚡ {t.name}</h3>
+                <h3>{t.name}</h3>
                 <span className="user-profile-badge">{t.memberCount} Members</span>
               </div>
               <div className="card-body">

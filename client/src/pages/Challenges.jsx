@@ -340,8 +340,12 @@ const Challenges = () => {
               <tbody>
                 {challenges.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-semibold">⚡ {c.teamName}</td>
-                    <td>{c.title}</td>
+                    <td className="font-semibold">{c.teamName}</td>
+                    <td>
+                      <Link to={`/admin/challenges/${c.id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                        {c.title}
+                      </Link>
+                    </td>
                     <td>
                       <span className="username-tag">{c.difficulty}</span>
                     </td>
@@ -370,7 +374,18 @@ const Challenges = () => {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <Link
+                          to={`/admin/challenges/${c.id}`}
+                          style={{
+                            color: 'var(--primary)',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          View Progress
+                        </Link>
                         <button
                           onClick={() => openEditModal(c)}
                           style={{

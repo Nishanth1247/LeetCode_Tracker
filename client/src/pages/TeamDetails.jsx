@@ -173,7 +173,7 @@ const TeamDetails = () => {
     <div className="dashboard-container">
       <div className="dashboard-header-flex">
         <div>
-          <h1 className="text-2xl font-bold">⚡ {team.name}</h1>
+          <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="welcome-subtitle">
             Created on {new Date(team.createdAt).toLocaleDateString()}
           </p>
@@ -399,29 +399,6 @@ const TeamDetails = () => {
 };
 
 const AdminChallengeItem = ({ challenge, onDelete }) => {
-  const [progressData, setProgressData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const res = await getChallengeProgress(challenge.id);
-        if (res.success) {
-          setProgressData(res.data);
-        }
-      } catch (e) {
-        console.error('Failed to load challenge progress:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProgress();
-  }, [challenge.id]);
-
-  const status = progressData ? progressData.status : challenge.status;
-  const progress = progressData ? progressData.progress : { solved: 0, target: challenge.target, percentage: 0 };
-
   return (
     <div
       style={{
@@ -433,27 +410,32 @@ const AdminChallengeItem = ({ challenge, onDelete }) => {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>{challenge.title}</h4>
+          <Link
+            to={`/admin/challenges/${challenge.id}`}
+            style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}
+          >
+            {challenge.title}
+          </Link>
           {challenge.description && <p className="welcome-subtitle">{challenge.description}</p>}
         </div>
         <span
           className="status-badge"
           style={{
             backgroundColor:
-              status === 'COMPLETED'
+              challenge.status === 'COMPLETED'
                 ? 'rgba(16, 185, 129, 0.15)'
-                : status === 'EXPIRED'
+                : challenge.status === 'EXPIRED'
                 ? 'rgba(239, 68, 68, 0.15)'
                 : 'rgba(37, 99, 235, 0.15)',
             color:
-              status === 'COMPLETED'
+              challenge.status === 'COMPLETED'
                 ? 'var(--status-easy)'
-                : status === 'EXPIRED'
+                : challenge.status === 'EXPIRED'
                 ? 'var(--status-hard)'
                 : 'var(--primary)',
           }}
         >
-          {status}
+          {challenge.status}
         </span>
       </div>
 
@@ -471,87 +453,13 @@ const AdminChallengeItem = ({ challenge, onDelete }) => {
         </span>
       </div>
 
-      {loading ? (
-        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--muted)' }}>Calculating progress...</div>
-      ) : progressData ? (
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-            <span>Progress: {progress.solved} / {progress.target}</span>
-            <span>{progress.percentage}%</span>
-          </div>
-          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: `${progress.percentage}%`, height: '100%', backgroundColor: status === 'COMPLETED' ? 'var(--status-easy)' : 'var(--primary)' }}></div>
-          </div>
-
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="btn btn-secondary"
-            style={{ marginTop: '0.75rem', fontSize: '0.8rem', width: 'auto', padding: '0.3rem 0.6rem' }}
-          >
-            {expanded ? 'Hide Details ▲' : 'Inspect Member Breakdown & Problems ▼'}
-          </button>
-
-          {expanded && (
-            <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
-              <h5 style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>Member Breakdown</h5>
-              <div className="table-responsive">
-                <table className="data-table" style={{ fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr>
-                      <th>Member</th>
-                      <th>Solved</th>
-                      <th>Target</th>
-                      <th>Progress %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {progressData.membersProgress.map((m) => (
-                      <tr key={m.userId}>
-                        <td>{m.name}</td>
-                        <td className="font-semibold">{m.solved}</td>
-                        <td>{m.target}</td>
-                        <td>{m.percentage}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {progressData.problems && progressData.problems.length > 0 && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <h5 style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>Counted Submissions ({progressData.problems.length})</h5>
-                  <div className="table-responsive">
-                    <table className="data-table" style={{ fontSize: '0.8rem' }}>
-                      <thead>
-                        <tr>
-                          <th>Member</th>
-                          <th>Problem</th>
-                          <th>Difficulty</th>
-                          <th>Language</th>
-                          <th>Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {progressData.problems.map((p, idx) => (
-                          <tr key={idx}>
-                            <td>{p.userName}</td>
-                            <td>{p.title}</td>
-                            <td>{p.difficulty}</td>
-                            <td>{p.language}</td>
-                            <td>{new Date(p.solvedAt).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      <div style={{ marginTop: '0.75rem', textAlign: 'right' }}>
+      <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link
+          to={`/admin/challenges/${challenge.id}`}
+          style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}
+        >
+          View Full Progress →
+        </Link>
         <button
           onClick={() => onDelete(challenge.id, challenge.title)}
           style={{
@@ -562,7 +470,7 @@ const AdminChallengeItem = ({ challenge, onDelete }) => {
             fontSize: '0.85rem',
           }}
         >
-          🗑️ Delete Challenge
+          🗑️ Delete
         </button>
       </div>
     </div>

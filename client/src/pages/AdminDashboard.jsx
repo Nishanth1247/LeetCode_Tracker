@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api, { getAllTeams, getAllChallenges } from '../services/api';
+import api, { getAllTeams, getAllChallenges, getChallengeProgress } from '../services/api';
 
 const AdminDashboard = () => {
   const [members, setMembers] = useState([]);
   const [teamsCount, setTeamsCount] = useState(0);
   const [activeChallengesCount, setActiveChallengesCount] = useState(0);
   const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
+  const [teamsList, setTeamsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,15 +29,62 @@ const AdminDashboard = () => {
         setMembers(usersRes.data.data);
       }
 
-      if (teamsRes && teamsRes.success) {
-        setTeamsCount(teamsRes.data.length);
-      }
+      const allChallenges = (challengesRes && challengesRes.success) ? (challengesRes.data || []) : [];
 
       if (challengesRes && challengesRes.success) {
-        const active = challengesRes.data.filter((c) => c.status === 'ACTIVE').length;
-        const completed = challengesRes.data.filter((c) => c.status === 'COMPLETED').length;
+        const active = allChallenges.filter((c) => c.status === 'ACTIVE').length;
+        const completed = allChallenges.filter((c) => c.status === 'COMPLETED').length;
         setActiveChallengesCount(active);
         setCompletedChallengesCount(completed);
+      }
+
+      if (teamsRes && teamsRes.success) {
+        const rawTeams = teamsRes.data || [];
+        setTeamsCount(rawTeams.length);
+
+        // Fetch challenge progress for active team challenges to compute aggregate team progress
+        const activeChallenges = allChallenges.filter((c) => c.status === 'ACTIVE');
+        const progressPromises = activeChallenges.map((c) =>
+          getChallengeProgress(c.id).catch(() => null)
+        );
+        const progressResults = await Promise.all(progressPromises);
+        const validProgress = progressResults.filter((r) => r && r.success).map((r) => r.data);
+
+        // Map teams with progress metrics
+        const teamsProgressList = rawTeams.map((t) => {
+          const teamActiveChallenges = activeChallenges.filter((c) => c.teamId === t.id);
+          const teamCompletedChallenges = allChallenges.filter((c) => c.teamId === t.id && c.status === 'COMPLETED');
+          
+          let totalTarget = 0;
+          let totalSolved = 0;
+
+          teamActiveChallenges.forEach((c) => {
+            const prog = validProgress.find((p) => p.challenge && p.challenge.id === c.id);
+            if (prog && prog.progress) {
+              totalTarget += prog.progress.target || 0;
+              totalSolved += prog.progress.solved || 0;
+            } else {
+              totalTarget += c.target || 0;
+            }
+          });
+
+          const remaining = Math.max(0, totalTarget - totalSolved);
+          const percentage = totalTarget > 0 ? Math.min(100, Math.round((totalSolved / totalTarget) * 100)) : 0;
+
+          return {
+            id: t.id,
+            name: t.name,
+            memberCount: t.memberCount,
+            activeChallengeCount: teamActiveChallenges.length,
+            completedChallengeCount: teamCompletedChallenges.length,
+            target: totalTarget,
+            solved: totalSolved,
+            remaining,
+            percentage,
+          };
+        });
+
+        setTeamsList(teamsProgressList);
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
@@ -124,6 +172,66 @@ const AdminDashboard = () => {
           </Link>
         </div>
       </div>
+
+      {/* V8.3 Team Completion Progress Section */}
+      {teamsList.length > 0 && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div className="card-header">
+            <h3>Team Progress Overview</h3>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              {teamsList.map((t) => {
+                const hasActive = t.activeChallengeCount > 0;
+                return (
+                  <div
+                    key={t.id}
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <Link to={`/admin/teams/${t.id}`} style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--primary)', textDecoration: 'none' }}>
+                        {t.name}
+                      </Link>
+                      <span className="user-profile-badge" style={{ fontSize: '0.75rem' }}>
+                        {t.memberCount} Members
+                      </span>
+                    </div>
+
+                    {hasActive ? (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                          <span>Overall Progress</span>
+                          <span>
+                            {t.solved} / {t.target} ({t.percentage}%)
+                          </span>
+                        </div>
+                        <div style={{ width: '100%', height: '10px', backgroundColor: 'var(--border)', borderRadius: '5px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+                          <div style={{ width: `${t.percentage}%`, height: '100%', backgroundColor: t.percentage === 100 ? 'var(--status-easy)' : 'var(--primary)' }}></div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                          <span>Remaining: {t.remaining}</span>
+                          <span>
+                            Challenges: {t.activeChallengeCount} Active | {t.completedChallengeCount} Completed
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: '0.5rem' }}>
+                        No active challenges
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <div className="alert alert-error">{error}</div>}
 

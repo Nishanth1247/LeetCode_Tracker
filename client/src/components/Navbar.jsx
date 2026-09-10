@@ -71,6 +71,13 @@ const Navbar = () => {
               >
                 Solved History
               </Link>
+              <Link
+                to="/admin/streaks"
+                className={`nav-item ${location.pathname.startsWith('/admin/streaks') ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                Streaks
+              </Link>
             </>
           ) : (
             <>
