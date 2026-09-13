@@ -345,7 +345,7 @@ const MemberDashboard = () => {
                 className="btn btn-secondary"
                 style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
               >
-                {goalsData?.hasGoal ? '⚙️ Edit Goals' : '🎯 Set Your Goals'}
+                {goalsData?.hasGoal ? 'Edit Goals' : 'Set Your Goals'}
               </button>
             </div>
             <div className="card-body">

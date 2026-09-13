@@ -66,7 +66,6 @@ const MyTeam = () => {
     return (
       <div className="dashboard-container">
         <div className="card empty-state" style={{ padding: '3rem 1.5rem' }}>
-          <span style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>👥</span>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>No Team Assigned</h2>
           <p className="welcome-subtitle">You are not assigned to a team yet.</p>
           <p className="not-connected-tag" style={{ marginTop: '0.5rem' }}>

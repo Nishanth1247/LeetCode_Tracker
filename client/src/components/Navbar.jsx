@@ -152,7 +152,7 @@ const Navbar = () => {
             </button>
 
             <div className="user-profile-badge">
-              <span className="user-name">👤 {user?.name}</span>
+              <span className="user-name">{user?.name}</span>
             </div>
 
             <button onClick={handleLogout} className="btn-logout">

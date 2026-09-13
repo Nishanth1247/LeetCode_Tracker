@@ -103,10 +103,7 @@ const AdminDashboard = () => {
       {/* 1. Section A — KPI Cards */}
       <div className="stats-grid" style={{ padding: 0, marginBottom: '1.5rem' }}>
         <div className="stat-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-            <span className="stat-title">Total Members</span>
-            <span style={{ fontSize: '1.2rem' }}>👥</span>
-          </div>
+          <span className="stat-title">Total Members</span>
           <span className="stat-number highlight-total">{overview?.totalMembers || 0}</span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
             Registered member accounts
@@ -114,10 +111,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="stat-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-            <span className="stat-title">LeetCode Connected</span>
-            <span style={{ fontSize: '1.2rem' }}>🔗</span>
-          </div>
+          <span className="stat-title">LeetCode Connected</span>
           <span className="stat-number text-easy">{overview?.connectedMembers || 0}</span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
             Active connected profiles
@@ -125,10 +119,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="stat-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-            <span className="stat-title">Total Teams</span>
-            <span style={{ fontSize: '1.2rem' }}>🛡️</span>
-          </div>
+          <span className="stat-title">Total Teams</span>
           <span className="stat-number highlight-total">{overview?.totalTeams || 0}</span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
             Active member teams
@@ -136,10 +127,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="stat-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-            <span className="stat-title">Active Challenges</span>
-            <span style={{ fontSize: '1.2rem' }}>🎯</span>
-          </div>
+          <span className="stat-title">Active Challenges</span>
           <span className="stat-number text-medium">{overview?.activeChallenges || 0}</span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
             Ongoing team sprints
@@ -147,10 +135,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="stat-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-            <span className="stat-title">Completed Challenges</span>
-            <span style={{ fontSize: '1.2rem' }}>🏆</span>
-          </div>
+          <span className="stat-title">Completed Challenges</span>
           <span className="stat-number text-easy">{overview?.completedChallenges || 0}</span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
             Finished team challenges
@@ -455,27 +440,34 @@ const AdminDashboard = () => {
             <h3>Quick Actions</h3>
           </div>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-              <Link to="/admin/users" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                👤 Manage Users
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <Link to="/admin/users" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Manage Users</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/admin/teams" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                🛡️ Manage Teams
+              <Link to="/admin/teams" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Manage Teams</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/admin/challenges" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                🎯 Challenges
+              <Link to="/admin/challenges" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Challenges</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/leaderboard" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                🏆 Leaderboard
+              <Link to="/leaderboard" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Leaderboard</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/admin/streaks" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                🔥 Streaks
+              <Link to="/admin/streaks" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Streaks</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/analytics" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                📊 Analytics
+              <Link to="/analytics" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Analytics</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
-              <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                📜 Solved Problems
+              <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+                <span>Solved Problems</span>
+                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
               </Link>
             </div>
           </div>
