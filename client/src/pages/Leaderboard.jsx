@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getLeaderboard } from '../services/api';
+import { getLeaderboard, getLeaderboardPrivacy, updateLeaderboardPrivacy } from '../services/api';
 
 const Leaderboard = () => {
   const { user, isAdmin } = useAuth();
@@ -8,9 +8,40 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Privacy toggle state for member
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
+  const [privacyUpdating, setPrivacyUpdating] = useState(false);
+  const [privacyError, setPrivacyError] = useState('');
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
   useEffect(() => {
     fetchLeaderboard();
-  }, []);
+    if (!isAdmin) {
+      fetchPrivacySetting();
+    }
+  }, [isAdmin]);
+
+  // Handle ESC key for modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showPrivacyModal) {
+        setShowPrivacyModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPrivacyModal]);
+
+  const fetchPrivacySetting = async () => {
+    try {
+      const res = await getLeaderboardPrivacy();
+      if (res.success) {
+        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
+      }
+    } catch (err) {
+      console.error('Failed to fetch leaderboard privacy setting:', err);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     try {
@@ -25,6 +56,37 @@ const Leaderboard = () => {
       setError(err.response?.data?.message || 'Unable to load leaderboard.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTogglePrivacy = async (e) => {
+    const newOptInValue = e.target.checked;
+    const previousOptInValue = leaderboardOptIn;
+
+    // Optimistically update UI
+    setLeaderboardOptIn(newOptInValue);
+    setPrivacyUpdating(true);
+    setPrivacyError('');
+
+    try {
+      const res = await updateLeaderboardPrivacy(newOptInValue);
+      if (res.success) {
+        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
+        // Refresh leaderboard rankings immediately
+        const lbRes = await getLeaderboard();
+        if (lbRes.success) {
+          setLeaderboard(lbRes.data || []);
+        }
+      } else {
+        throw new Error('Failed response from server');
+      }
+    } catch (err) {
+      console.error('Error updating leaderboard privacy:', err);
+      // Revert toggle state on error
+      setLeaderboardOptIn(previousOptInValue);
+      setPrivacyError('Unable to update leaderboard privacy. Please try again.');
+    } finally {
+      setPrivacyUpdating(false);
     }
   };
 
@@ -68,6 +130,47 @@ const Leaderboard = () => {
         </div>
       </div>
 
+      {privacyError && (
+        <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>
+          <span>⚠️ {privacyError}</span>
+        </div>
+      )}
+
+      {/* MEMBER PRIVACY CONTROL BAR */}
+      {!isAdmin && (
+        <div className="toggle-switch-container">
+          <div className="toggle-switch-group">
+            <label className="toggle-switch" htmlFor="leaderboard-privacy-toggle">
+              <input
+                id="leaderboard-privacy-toggle"
+                type="checkbox"
+                checked={leaderboardOptIn}
+                onChange={handleTogglePrivacy}
+                disabled={privacyUpdating}
+                aria-checked={leaderboardOptIn}
+                aria-label="Show me on leaderboard"
+              />
+              <span className="toggle-slider"></span>
+            </label>
+            <label htmlFor="leaderboard-privacy-toggle" className="toggle-switch-label">
+              Show me on leaderboard
+            </label>
+            <span className={`toggle-state-badge ${leaderboardOptIn ? 'on' : 'off'}`}>
+              {privacyUpdating ? 'Updating...' : leaderboardOptIn ? 'ON' : 'OFF'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowPrivacyModal(true)}
+            style={{ width: 'auto', padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
+          >
+            View Details
+          </button>
+        </div>
+      )}
+
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
@@ -86,7 +189,9 @@ const Leaderboard = () => {
             <span className="card-description">
               {isAdmin
                 ? 'Connected team members will appear here.'
-                : 'You can enable your visibility in your Dashboard settings.'}
+                : !leaderboardOptIn
+                ? 'Turn on "Show me on leaderboard" to participate.'
+                : 'Share details with your teammates to get them on the board.'}
             </span>
           </div>
         </div>
@@ -143,8 +248,73 @@ const Leaderboard = () => {
           </div>
         </div>
       )}
+
+      {/* PRIVACY DETAILS MODAL */}
+      {showPrivacyModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowPrivacyModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="privacy-modal-title"
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 id="privacy-modal-title">Leaderboard Privacy</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowPrivacyModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: '0.92rem', color: 'var(--muted)', marginBottom: '1rem' }}>
+                Your leaderboard visibility controls whether other team members can see you on the MEMBER leaderboard.
+              </p>
+
+              <h4 className="modal-section-title">When turned ON</h4>
+              <ul className="modal-list">
+                <li>Your name can appear on the team leaderboard.</li>
+                <li>Your LeetCode progress can be compared with other members who have opted in.</li>
+                <li>Your leaderboard position and relevant leaderboard statistics can be visible to other participating members.</li>
+              </ul>
+
+              <h4 className="modal-section-title">When turned OFF</h4>
+              <ul className="modal-list">
+                <li>You are hidden from the MEMBER leaderboard.</li>
+                <li>Other members cannot see you in the member leaderboard.</li>
+                <li>Your stored LeetCode statistics are not deleted.</li>
+                <li>Your LeetCode account remains connected.</li>
+                <li>Your personal analytics, challenges, activity, and other dashboard features continue to work.</li>
+              </ul>
+
+              <h4 className="modal-section-title">Important</h4>
+              <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>
+                Admins can still view connected members through the admin leaderboard view, according to the existing admin functionality. Changing this setting only controls MEMBER leaderboard visibility.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowPrivacyModal(false)}
+                style={{ width: 'auto', padding: '0.5rem 1.25rem' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Leaderboard;
+

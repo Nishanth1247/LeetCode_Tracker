@@ -4,8 +4,6 @@ import {
   getMyLeetCodeStats,
   connectLeetCode,
   getMyActivity,
-  getLeaderboardPrivacy,
-  updateLeaderboardPrivacy,
   getMyGoals,
   updateMyGoals,
   getMyPerformanceSummary,
@@ -26,11 +24,6 @@ const MemberDashboard = () => {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
 
-  // Privacy Consent state
-  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
-  const [privacyLoading, setPrivacyLoading] = useState(false);
-  const [privacySuccessMsg, setPrivacySuccessMsg] = useState('');
-
   // V11 Goals & Performance Summary state
   const [goalsData, setGoalsData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
@@ -41,7 +34,6 @@ const MemberDashboard = () => {
 
   useEffect(() => {
     fetchStats();
-    fetchPrivacy();
     fetchGoalsAndPerformance();
   }, []);
 
@@ -544,44 +536,7 @@ const MemberDashboard = () => {
         </div>
       )}
 
-      {/* V7 LEADERBOARD PRIVACY CONSENT SECTION */}
-      <div className="card privacy-section-card" style={{ marginTop: '1.5rem' }}>
-        <div className="card-header">
-          <h3>Leaderboard Visibility & Privacy</h3>
-        </div>
-        <div className="card-body">
-          {privacySuccessMsg && (
-            <div className="alert alert-success">
-              <span>✓ {privacySuccessMsg}</span>
-            </div>
-          )}
-          <p className="card-description">
-            When enabled, your LeetCode username and statistics can be viewed by other team members on the team leaderboard.
-          </p>
-          <form onSubmit={handlePrivacySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
-              <input
-                type="checkbox"
-                checked={leaderboardOptIn}
-                onChange={(e) => setLeaderboardOptIn(e.target.checked)}
-                disabled={privacyLoading}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <span>Show my LeetCode statistics on the team leaderboard.</span>
-            </label>
-            <div>
-              <button
-                type="submit"
-                className="btn btn-secondary"
-                disabled={privacyLoading}
-                style={{ width: 'auto', padding: '0.5rem 1.2rem' }}
-              >
-                {privacyLoading ? 'Saving...' : 'Save Privacy Settings'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      {/* V4 RECENT LEETCODE ACTIVITY SECTION */}
 
       {/* V4 RECENT LEETCODE ACTIVITY SECTION */}
       {statsData?.username && (
