@@ -188,4 +188,25 @@ export const getAdminSyncStatus = async () => {
   return res.data;
 };
 
+// Admin User Management helpers
+export const getAdminUsers = async () => {
+  const res = await api.get('/admin/users');
+  return res.data;
+};
+
+export const getAdminUser = async (id) => {
+  const res = await api.get(`/admin/users/${id}`);
+  return res.data;
+};
+
+export const updateAdminUser = async (id, data) => {
+  const res = await api.put(`/admin/users/${id}`, data);
+  return res.data;
+};
+
+export const deleteAdminUser = async (id) => {
+  const res = await api.delete(`/admin/users/${id}`);
+  return res.data;
+};
+
 export default api;

@@ -18,6 +18,7 @@ import MyTeam from './pages/MyTeam';
 import AdminSolvedProblems from './pages/AdminSolvedProblems';
 import ChallengeProgressDetails from './pages/ChallengeProgressDetails';
 import AdminStreaks from './pages/AdminStreaks';
+import AdminUsers from './pages/AdminUsers';
 
 // Root redirect handler based on role
 const HomeRedirect = () => {
@@ -116,6 +117,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminStreaks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminUsers />
               </ProtectedRoute>
             }
           />

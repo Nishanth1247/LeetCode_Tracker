@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const adminSubmissionController = require('../controllers/adminSubmissionController');
+const adminUserController = require('../controllers/adminUserController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
+
+// ADMIN ONLY endpoints for User Management
+router.get('/users', verifyToken, requireAdmin, adminUserController.getAdminUsers);
+router.get('/users/:id', verifyToken, requireAdmin, adminUserController.getAdminUserById);
+router.put('/users/:id', verifyToken, requireAdmin, adminUserController.updateAdminUser);
+router.delete('/users/:id', verifyToken, requireAdmin, adminUserController.deleteAdminUser);
 
 // ADMIN ONLY endpoint for viewing member submission history
 router.get('/submissions', verifyToken, requireAdmin, adminSubmissionController.getAdminSubmissions);

@@ -82,6 +82,13 @@ const Navbar = () => {
                   >
                     Streaks
                   </Link>
+                  <Link
+                    to="/admin/users"
+                    className={`nav-item ${location.pathname.startsWith('/admin/users') ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    Users
+                  </Link>
                 </>
               ) : (
                 <>
