@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const adminSubmissionController = require('../controllers/adminSubmissionController');
 const adminUserController = require('../controllers/adminUserController');
+const adminDashboardController = require('../controllers/adminDashboardController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
+
+// ADMIN ONLY endpoint for Dashboard 2.0 aggregated overview
+router.get('/dashboard', verifyToken, requireAdmin, adminDashboardController.getAdminDashboard);
 
 // ADMIN ONLY endpoints for User Management
 router.get('/users', verifyToken, requireAdmin, adminUserController.getAdminUsers);

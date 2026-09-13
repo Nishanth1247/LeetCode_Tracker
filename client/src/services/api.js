@@ -189,6 +189,11 @@ export const getAdminSyncStatus = async () => {
 };
 
 // Admin User Management helpers
+export const getAdminDashboardOverview = async () => {
+  const res = await api.get('/admin/dashboard');
+  return res.data;
+};
+
 export const getAdminUsers = async () => {
   const res = await api.get('/admin/users');
   return res.data;
