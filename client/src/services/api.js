@@ -183,4 +183,9 @@ export const getAdminMemberStreakDetail = async (userId) => {
   return res.data;
 };
 
+export const getAdminSyncStatus = async () => {
+  const res = await api.get('/admin/sync-status');
+  return res.data;
+};
+
 export default api;

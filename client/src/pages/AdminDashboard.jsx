@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api, { getAllTeams, getAllChallenges, getChallengeProgress } from '../services/api';
+import api, { getAllTeams, getAllChallenges, getChallengeProgress, getAdminSyncStatus } from '../services/api';
 
 const AdminDashboard = () => {
   const [members, setMembers] = useState([]);
@@ -8,6 +8,7 @@ const AdminDashboard = () => {
   const [activeChallengesCount, setActiveChallengesCount] = useState(0);
   const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
   const [teamsList, setTeamsList] = useState([]);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -19,14 +20,19 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError('');
-      const [usersRes, teamsRes, challengesRes] = await Promise.all([
+      const [usersRes, teamsRes, challengesRes, syncRes] = await Promise.all([
         api.get('/users'),
         getAllTeams().catch(() => null),
         getAllChallenges().catch(() => null),
+        getAdminSyncStatus().catch(() => null),
       ]);
 
       if (usersRes.data && usersRes.data.success) {
         setMembers(usersRes.data.data);
+      }
+
+      if (syncRes && syncRes.success) {
+        setSyncStatus(syncRes.data);
       }
 
       const allChallenges = (challengesRes && challengesRes.success) ? (challengesRes.data || []) : [];
@@ -170,6 +176,44 @@ const AdminDashboard = () => {
           <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', fontSize: '0.8rem', textDecoration: 'none' }}>
             Historical Solved →
           </Link>
+        </div>
+      </div>
+
+      {/* V8.4 Automatic LeetCode Sync Status Section */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div className="card-header dashboard-header-flex">
+          <h3>Automatic LeetCode Sync</h3>
+          {syncStatus ? (
+            <span className="status-badge status-active">{syncStatus.status}</span>
+          ) : (
+            <span className="status-badge status-inactive">Status Unavailable</span>
+          )}
+        </div>
+        <div className="card-body">
+          {syncStatus ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', fontSize: '0.88rem' }}>
+              <div>
+                <span className="info-label" style={{ display: 'block', marginBottom: '0.2rem' }}>Frequency</span>
+                <strong style={{ color: 'var(--text)' }}>{syncStatus.frequency}</strong>
+              </div>
+              <div>
+                <span className="info-label" style={{ display: 'block', marginBottom: '0.2rem' }}>Last Run</span>
+                <span style={{ color: 'var(--text)' }}>{formatDateTime(syncStatus.lastRun)}</span>
+              </div>
+              <div>
+                <span className="info-label" style={{ display: 'block', marginBottom: '0.2rem' }}>Members Synced</span>
+                <strong style={{ color: 'var(--status-easy)' }}>{syncStatus.successful} / {syncStatus.attempted}</strong>
+              </div>
+              <div>
+                <span className="info-label" style={{ display: 'block', marginBottom: '0.2rem' }}>Failed Syncs</span>
+                <strong style={{ color: syncStatus.failed > 0 ? 'var(--status-hard)' : 'var(--text)' }}>{syncStatus.failed}</strong>
+              </div>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--muted)', fontSize: '0.88rem' }}>
+              Automatic sync status unavailable
+            </p>
+          )}
         </div>
       </div>
 

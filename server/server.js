@@ -1,5 +1,6 @@
 const app = require('./app');
 const { testConnection } = require('./config/db');
+const { startAutoSyncScheduler } = require('./services/autoSyncService');
 
 const PORT = process.env.PORT || 5000;
 
@@ -12,6 +13,7 @@ app.listen(PORT, async () => {
   const dbOk = await testConnection();
   if (dbOk) {
     console.log('MySQL Database status: CONNECTED');
+    startAutoSyncScheduler();
   } else {
     console.warn('MySQL Database status: DISCONNECTED (Check your .env settings)');
   }

@@ -133,29 +133,8 @@ const MemberDashboard = () => {
     }
   };
 
-  const handleSync = async () => {
-    try {
-      setActionLoading(true);
-      setError('');
-      setSuccessMsg('');
-
-      const res = await syncLeetCode();
-      if (res.success) {
-        setStatsData(res.data);
-        setSuccessMsg('Successfully synced LeetCode statistics!');
-        fetchActivity();
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || err.message || 'Unable to sync LeetCode stats. Please try again later.'
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return 'Waiting for first automatic sync';
     const date = new Date(dateString);
     return date.toLocaleString(undefined, {
       day: 'numeric',
@@ -302,13 +281,6 @@ const MemberDashboard = () => {
                   <span className="info-label">Last Synced:</span>
                   <span className="sync-time">{formatDate(statsData.lastSynced)}</span>
                 </div>
-                <button
-                  onClick={handleSync}
-                  className="btn btn-secondary btn-sync"
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? 'Syncing...' : '🔄 Sync Now'}
-                </button>
               </div>
             </div>
           )}

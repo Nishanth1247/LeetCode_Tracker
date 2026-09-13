@@ -348,3 +348,49 @@ exports.getAdminMemberStreakDetail = async (req, res) => {
     });
   }
 };
+
+// ADMIN ONLY: Get automatic LeetCode sync status
+exports.getSyncStatus = async (req, res) => {
+  try {
+    const autoSyncService = require('../services/autoSyncService');
+    const status = autoSyncService.getSyncStatus();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        status: status.isSyncing ? 'Syncing' : 'Active',
+        frequency: 'Every 1 hour',
+        lastRun: status.lastRun,
+        attempted: status.attempted,
+        successful: status.successful,
+        failed: status.failed,
+      },
+    });
+  } catch (error) {
+    console.error('getSyncStatus error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch automatic sync status.',
+    });
+  }
+};
+
+// ADMIN ONLY: Trigger manual sync batch for development & testing
+exports.triggerManualSync = async (req, res) => {
+  try {
+    const autoSyncService = require('../services/autoSyncService');
+    const result = await autoSyncService.syncAllConnectedMembers();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Automatic LeetCode sync batch executed.',
+      data: result,
+    });
+  } catch (error) {
+    console.error('triggerManualSync error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to trigger sync batch.',
+    });
+  }
+};
