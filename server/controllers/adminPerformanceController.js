@@ -301,7 +301,16 @@ exports.getAdminMemberPerformance = async (req, res) => {
 exports.getAdminMemberPerformanceDetail = async (req, res) => {
   try {
     const { userId } = req.params;
+    const targetId = parseInt(userId, 10);
 
+    if (isNaN(targetId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid member ID provided.',
+      });
+    }
+
+    // 1. Query user & team details safely
     const [users] = await pool.query(`
       SELECT 
         u.id, u.name, u.email, u.role, u.leetcode_username as leetcodeUsername,
@@ -311,15 +320,12 @@ exports.getAdminMemberPerformanceDetail = async (req, res) => {
         u.leetcode_hard_solved as hardSolved,
         u.leetcode_last_activity as lastActivity,
         u.leetcode_last_synced as lastSynced,
-        t.name as teamName,
-        g.monthly_problem_goal as monthlyGoal,
-        g.daily_problem_goal as dailyGoal
+        t.name as teamName
       FROM users u
       LEFT JOIN team_members tm ON u.id = tm.user_id
       LEFT JOIN teams t ON tm.team_id = t.id
-      LEFT JOIN user_goals g ON u.id = g.user_id
       WHERE u.id = ?
-    `, [userId]);
+    `, [targetId]);
 
     if (users.length === 0) {
       return res.status(404).json({
@@ -336,13 +342,29 @@ exports.getAdminMemberPerformanceDetail = async (req, res) => {
       });
     }
 
-    // Submissions
+    // 2. Fetch user_goals separately with safe fallback if user_goals row or table is missing
+    let monthlyGoal = null;
+    let dailyGoal = null;
+    try {
+      const [goals] = await pool.query(
+        'SELECT monthly_problem_goal, daily_problem_goal FROM user_goals WHERE user_id = ?',
+        [targetId]
+      );
+      if (goals.length > 0) {
+        monthlyGoal = goals[0].monthly_problem_goal;
+        dailyGoal = goals[0].daily_problem_goal;
+      }
+    } catch (goalErr) {
+      console.warn(`[getAdminMemberPerformanceDetail] Non-fatal user_goals query error for user ${targetId}:`, goalErr.message);
+    }
+
+    // 3. Fetch submissions safely
     const [submissions] = await pool.query(`
       SELECT problem_title as title, problem_slug as slug, difficulty, language, solved_at as solvedAt, DATE_FORMAT(solved_at, '%Y-%m-%d') as solveDate
       FROM leetcode_submissions
       WHERE user_id = ?
       ORDER BY solved_at DESC
-    `, [userId]);
+    `, [targetId]);
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0] + ' 00:00:00';
@@ -351,52 +373,54 @@ exports.getAdminMemberPerformanceDetail = async (req, res) => {
     const endMs = new Date(endOfMonth).getTime();
 
     const monthlySubs = submissions.filter((s) => {
+      if (!s.solvedAt) return false;
       const solvedMs = new Date(s.solvedAt).getTime();
       return solvedMs >= startMs && solvedMs <= endMs;
     });
 
-    const solvedThisMonth = new Set(monthlySubs.map((s) => s.slug)).size;
+    const solvedThisMonth = new Set(monthlySubs.map((s) => s.slug).filter(Boolean)).size;
 
-    const datesAsc = submissions.map((s) => s.solveDate);
+    const datesAsc = submissions.map((s) => s.solveDate).filter(Boolean);
     const { currentStreak, longestStreak } = calculateMemberStreak(datesAsc);
 
     return res.status(200).json({
       success: true,
+      message: 'Member performance details fetched successfully.',
       data: {
         profile: {
           id: member.id,
           name: member.name,
           email: member.email,
           teamName: member.teamName || 'Unassigned',
-          leetcodeUsername: member.leetcodeUsername,
+          leetcodeUsername: member.leetcodeUsername || null,
           totalSolved: member.totalSolved || 0,
           easySolved: member.easySolved || 0,
           mediumSolved: member.mediumSolved || 0,
           hardSolved: member.hardSolved || 0,
-          lastActivity: member.lastActivity,
-          lastSynced: member.lastSynced,
+          lastActivity: member.lastActivity || null,
+          lastSynced: member.lastSynced || null,
         },
         streaks: {
-          currentStreak,
-          longestStreak,
+          currentStreak: currentStreak || 0,
+          longestStreak: longestStreak || 0,
         },
         goals: {
-          monthlyGoal: member.monthlyGoal || null,
-          monthlySolved,
-          monthlyPct: member.monthlyGoal ? Math.min(100, Math.round((solvedThisMonth / member.monthlyGoal) * 100)) : 0,
-          dailyGoal: member.dailyGoal || null,
+          monthlyGoal,
+          monthlySolved: solvedThisMonth,
+          monthlyPct: monthlyGoal ? Math.min(100, Math.round((solvedThisMonth / monthlyGoal) * 100)) : 0,
+          dailyGoal,
         },
-        recentSubmissions: submissions.slice(0, 10).map((s) => ({
-          title: s.title,
-          slug: s.slug,
-          difficulty: s.difficulty,
-          language: s.language,
-          solvedAt: s.solvedAt,
+        recentSubmissions: (submissions || []).slice(0, 10).map((s) => ({
+          title: s.title || 'Untitled Problem',
+          slug: s.slug || '',
+          difficulty: s.difficulty || 'MIXED',
+          language: s.language || 'Code',
+          solvedAt: s.solvedAt ? new Date(s.solvedAt).toISOString() : new Date().toISOString(),
         })),
       },
     });
   } catch (error) {
-    console.error('getAdminMemberPerformanceDetail error:', error);
+    console.error('getAdminMemberPerformanceDetail ERROR Traceback:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch member performance details.',

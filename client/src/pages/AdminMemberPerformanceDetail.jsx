@@ -21,8 +21,14 @@ const AdminMemberPerformanceDetail = () => {
         setDetailData(res.data);
       }
     } catch (err) {
-      console.error('Failed to load member performance detail:', err);
-      setError(err.response?.data?.message || 'Failed to load member performance details.');
+      if (import.meta.env.DEV || process.env.NODE_ENV === 'development') {
+        console.error('[AdminMemberPerformanceDetail Error Debug]:', {
+          status: err.response?.status,
+          message: err.response?.data?.message || err.message,
+          data: err.response?.data,
+        });
+      }
+      setError(err.response?.data?.message || 'Failed to fetch member performance details.');
     } finally {
       setLoading(false);
     }
