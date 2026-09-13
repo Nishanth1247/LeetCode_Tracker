@@ -11,6 +11,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const teamRoutes = require('./routes/teamRoutes');
 const challengeRoutes = require('./routes/challengeRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const goalRoutes = require('./routes/goalRoutes');
 const { testConnection } = require('./config/db');
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/goals', goalRoutes);
 
 // 404 Not Found Handler
 app.use((req, res) => {

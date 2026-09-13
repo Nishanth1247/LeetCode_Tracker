@@ -3,10 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import {
   getMyLeetCodeStats,
   connectLeetCode,
-  syncLeetCode,
   getMyActivity,
   getLeaderboardPrivacy,
   updateLeaderboardPrivacy,
+  getMyGoals,
+  updateMyGoals,
+  getMyPerformanceSummary,
 } from '../services/api';
 
 const MemberDashboard = () => {
@@ -29,10 +31,62 @@ const MemberDashboard = () => {
   const [privacyLoading, setPrivacyLoading] = useState(false);
   const [privacySuccessMsg, setPrivacySuccessMsg] = useState('');
 
+  // V11 Goals & Performance Summary state
+  const [goalsData, setGoalsData] = useState(null);
+  const [performanceData, setPerformanceData] = useState(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [monthlyInput, setMonthlyInput] = useState('30');
+  const [dailyInput, setDailyInput] = useState('1');
+  const [savingGoals, setSavingGoals] = useState(false);
+
   useEffect(() => {
     fetchStats();
     fetchPrivacy();
+    fetchGoalsAndPerformance();
   }, []);
+
+  const fetchGoalsAndPerformance = async () => {
+    try {
+      const [goalsRes, perfRes] = await Promise.all([
+        getMyGoals().catch(() => null),
+        getMyPerformanceSummary().catch(() => null),
+      ]);
+
+      if (goalsRes && goalsRes.success) {
+        setGoalsData(goalsRes.data);
+        if (goalsRes.data.monthlyGoal) setMonthlyInput(String(goalsRes.data.monthlyGoal));
+        if (goalsRes.data.dailyGoal) setDailyInput(String(goalsRes.data.dailyGoal));
+      }
+
+      if (perfRes && perfRes.success) {
+        setPerformanceData(perfRes.data);
+      }
+    } catch (err) {
+      console.error('Error loading goals and performance:', err);
+    }
+  };
+
+  const handleSaveGoals = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingGoals(true);
+      setError('');
+      const res = await updateMyGoals({
+        monthlyProblemGoal: parseInt(monthlyInput, 10),
+        dailyProblemGoal: parseInt(dailyInput, 10),
+      });
+
+      if (res.success) {
+        setSuccessMsg('Personal goals updated successfully!');
+        setShowGoalModal(false);
+        fetchGoalsAndPerformance();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update goals.');
+    } finally {
+      setSavingGoals(false);
+    }
+  };
 
   useEffect(() => {
     if (statsData?.username) {
@@ -284,6 +338,209 @@ const MemberDashboard = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* V11 MY PERSONAL GOALS & PERFORMANCE SUMMARY SECTIONS */}
+      {statsData?.username && (
+        <div className="dashboard-grid" style={{ marginTop: '1.5rem' }}>
+          {/* 1. My Personal Goals Card */}
+          <div className="card">
+            <div className="card-header dashboard-header-flex">
+              <h3>My Personal Goals</h3>
+              <button
+                onClick={() => setShowGoalModal(true)}
+                className="btn btn-secondary"
+                style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
+              >
+                {goalsData?.hasGoal ? '⚙️ Edit Goals' : '🎯 Set Your Goals'}
+              </button>
+            </div>
+            <div className="card-body">
+              {!goalsData?.hasGoal ? (
+                <div className="empty-state" style={{ padding: '1rem' }}>
+                  <p style={{ marginBottom: '0.5rem', fontWeight: 600 }}>No goals configured yet.</p>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: '0.75rem' }}>
+                    Set your monthly and daily target problems to track your progress.
+                  </p>
+                  <button
+                    onClick={() => setShowGoalModal(true)}
+                    className="btn btn-primary"
+                    style={{ width: 'auto', fontSize: '0.85rem' }}
+                  >
+                    Set Your Goals Now
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Monthly Goal Progress */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Monthly Goal</span>
+                      <span className="status-badge" style={{
+                        backgroundColor: goalsData.monthlyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : goalsData.monthlyStatus === 'ON TRACK' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: goalsData.monthlyStatus === 'COMPLETED' ? 'var(--status-easy)' : goalsData.monthlyStatus === 'ON TRACK' ? 'var(--primary)' : 'var(--status-hard)'
+                      }}>
+                        {goalsData.monthlyStatus}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
+                      <span>Progress: <strong>{goalsData.monthlySolved} / {goalsData.monthlyGoal}</strong> solved</span>
+                      <span><strong>{goalsData.monthlyPercentage}%</strong></span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${goalsData.monthlyPercentage}%`, height: '100%', backgroundColor: goalsData.monthlyPercentage === 100 ? 'var(--status-easy)' : 'var(--primary)' }}></div>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
+                      {goalsData.monthlyRemaining === 0 ? 'Monthly goal completed!' : `${goalsData.monthlyRemaining} problems remaining this month`}
+                    </span>
+                  </div>
+
+                  {/* Daily Goal Progress */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Daily Target (Today)</span>
+                      <span className="status-badge" style={{
+                        backgroundColor: goalsData.dailyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                        color: goalsData.dailyStatus === 'COMPLETED' ? 'var(--status-easy)' : 'var(--status-medium)'
+                      }}>
+                        {goalsData.dailyStatus}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
+                      <span>Today: <strong>{goalsData.dailySolved} / {goalsData.dailyGoal}</strong> solved</span>
+                      <span><strong>{goalsData.dailyPercentage}%</strong></span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${goalsData.dailyPercentage}%`, height: '100%', backgroundColor: goalsData.dailyPercentage === 100 ? 'var(--status-easy)' : 'var(--status-medium)' }}></div>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
+                      {goalsData.dailyRemaining === 0 ? 'Goal completed today!' : `${goalsData.dailyRemaining} more problem required today`}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Performance Summary Card */}
+          <div className="card">
+            <div className="card-header">
+              <h3>Performance Summary</h3>
+            </div>
+            <div className="card-body">
+              {!performanceData ? (
+                <div className="empty-state" style={{ padding: '1rem' }}>
+                  <p>Loading performance summary...</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                  <div className="stat-box">
+                    <span className="stat-title">Total Solved</span>
+                    <span className="stat-number highlight-total">{performanceData.totalSolved}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-title">This Month</span>
+                    <span className="stat-number text-easy">{performanceData.solvedThisMonth}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-title">This Week (7 Days)</span>
+                    <span className="stat-number text-medium">{performanceData.solvedThisWeek}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-title">Current Streak</span>
+                    <span className="stat-number text-easy">🔥 {performanceData.currentStreak} d</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-title">Longest Streak</span>
+                    <span className="stat-number text-easy">{performanceData.longestStreak} days</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-title">Active Days (Month)</span>
+                    <span className="stat-number highlight-total">{performanceData.activeDaysThisMonth} days</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Goal Modal Form */}
+      {showGoalModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: '420px' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Set Personal Goals</h3>
+              <button
+                onClick={() => setShowGoalModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="card-body">
+              <form onSubmit={handleSaveGoals} className="connect-form">
+                <div className="form-group">
+                  <label>Monthly Problems Goal (1–1000) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={monthlyInput}
+                    onChange={(e) => setMonthlyInput(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.2rem', display: 'block' }}>
+                    Target number of unique problems solved in a calendar month.
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <label>Daily Problems Goal (1–50) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={dailyInput}
+                    onChange={(e) => setDailyInput(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.2rem', display: 'block' }}>
+                    Target number of unique problems solved per day.
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                  <button type="submit" className="btn btn-primary" disabled={savingGoals}>
+                    {savingGoals ? 'Saving...' : 'Save Goals'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoalModal(false)}
+                    className="btn btn-secondary"
+                    disabled={savingGoals}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 

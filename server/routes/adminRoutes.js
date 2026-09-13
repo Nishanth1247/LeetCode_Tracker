@@ -3,10 +3,16 @@ const router = express.Router();
 const adminSubmissionController = require('../controllers/adminSubmissionController');
 const adminUserController = require('../controllers/adminUserController');
 const adminDashboardController = require('../controllers/adminDashboardController');
+const adminPerformanceController = require('../controllers/adminPerformanceController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 
 // ADMIN ONLY endpoint for Dashboard 2.0 aggregated overview
 router.get('/dashboard', verifyToken, requireAdmin, adminDashboardController.getAdminDashboard);
+
+// ADMIN ONLY endpoints for Team & Member Performance (V11)
+router.get('/team-performance', verifyToken, requireAdmin, adminPerformanceController.getAdminTeamPerformance);
+router.get('/member-performance', verifyToken, requireAdmin, adminPerformanceController.getAdminMemberPerformance);
+router.get('/member-performance/:userId', verifyToken, requireAdmin, adminPerformanceController.getAdminMemberPerformanceDetail);
 
 // ADMIN ONLY endpoints for User Management
 router.get('/users', verifyToken, requireAdmin, adminUserController.getAdminUsers);

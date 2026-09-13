@@ -137,3 +137,132 @@ exports.getTeamAnalytics = async (req, res) => {
     });
   }
 };
+
+exports.getMyPerformance = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Fetch user total solved stats
+    const [users] = await pool.query(
+      `SELECT leetcode_total_solved, leetcode_easy_solved, 
+              leetcode_medium_solved, leetcode_hard_solved 
+       FROM users WHERE id = ?`,
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    const u = users[0];
+    const totalSolved = u.leetcode_total_solved || 0;
+
+    // 2. Fetch submission dates
+    const now = new Date();
+    const nowMs = now.getTime();
+
+    // Start of Month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0] + ' 00:00:00';
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0] + ' 23:59:59';
+
+    // Start of Week (last 7 days)
+    const sevenDaysAgo = new Date(nowMs - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + ' 00:00:00';
+
+    const [monthlySubs] = await pool.query(
+      `SELECT COUNT(DISTINCT problem_slug) as count
+       FROM leetcode_submissions
+       WHERE user_id = ? AND solved_at >= ? AND solved_at <= ?`,
+      [userId, startOfMonth, endOfMonth]
+    );
+    const solvedThisMonth = monthlySubs[0]?.count || 0;
+
+    const [weeklySubs] = await pool.query(
+      `SELECT COUNT(DISTINCT problem_slug) as count
+       FROM leetcode_submissions
+       WHERE user_id = ? AND solved_at >= ?`,
+      [userId, sevenDaysAgo]
+    );
+    const solvedThisWeek = weeklySubs[0]?.count || 0;
+
+    // Active days this month
+    const [activeDaysRows] = await pool.query(
+      `SELECT COUNT(DISTINCT DATE_FORMAT(solved_at, '%Y-%m-%d')) as activeDays
+       FROM leetcode_submissions
+       WHERE user_id = ? AND solved_at >= ? AND solved_at <= ?`,
+      [userId, startOfMonth, endOfMonth]
+    );
+    const activeDaysThisMonth = activeDaysRows[0]?.activeDays || 0;
+
+    const avgProblemsPerActiveDay = activeDaysThisMonth > 0 ? Math.round((solvedThisMonth / activeDaysThisMonth) * 10) / 10 : 0;
+
+    // 3. Calculate streak metrics using all submission dates
+    const [subDates] = await pool.query(
+      `SELECT DATE_FORMAT(solved_at, '%Y-%m-%d') as solveDate
+       FROM leetcode_submissions
+       WHERE user_id = ?
+       GROUP BY solveDate
+       ORDER BY solveDate ASC`,
+      [userId]
+    );
+
+    const datesAsc = subDates.map((s) => s.solveDate);
+    const uniqueDates = [...new Set(datesAsc)].sort();
+
+    // Streak calculation
+    let longestStreak = 0;
+    let currentRun = 0;
+    let prevDateMs = null;
+
+    for (const dStr of uniqueDates) {
+      const dMs = new Date(dStr + 'T00:00:00').getTime();
+      if (prevDateMs === null) {
+        currentRun = 1;
+      } else {
+        const diffDays = Math.round((dMs - prevDateMs) / (24 * 60 * 60 * 1000));
+        if (diffDays === 1) currentRun++;
+        else currentRun = 1;
+      }
+      if (currentRun > longestStreak) longestStreak = currentRun;
+      prevDateMs = dMs;
+    }
+
+    const dateSet = new Set(uniqueDates);
+    const todayObj = new Date();
+    const todayStr = todayObj.toISOString().split('T')[0];
+    const yesterdayObj = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    let currentStreak = 0;
+    const activeToday = dateSet.has(todayStr);
+    let checkDate = activeToday ? todayObj : yesterdayObj;
+
+    if (dateSet.has(checkDate.toISOString().split('T')[0])) {
+      let curr = new Date(checkDate);
+      while (dateSet.has(curr.toISOString().split('T')[0])) {
+        currentStreak++;
+        curr.setDate(curr.getDate() - 1);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalSolved,
+        solvedThisMonth,
+        solvedThisWeek,
+        currentStreak,
+        longestStreak,
+        activeDaysThisMonth,
+        avgProblemsPerActiveDay,
+      },
+    });
+  } catch (error) {
+    console.error('getMyPerformance error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch performance summary.',
+    });
+  }
+};

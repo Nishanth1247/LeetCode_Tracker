@@ -83,6 +83,20 @@ const Navbar = () => {
                     Streaks
                   </Link>
                   <Link
+                    to="/admin/team-performance"
+                    className={`nav-item ${location.pathname.startsWith('/admin/team-performance') ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    Team Performance
+                  </Link>
+                  <Link
+                    to="/admin/member-performance"
+                    className={`nav-item ${location.pathname.startsWith('/admin/member-performance') ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    Member Performance
+                  </Link>
+                  <Link
                     to="/admin/users"
                     className={`nav-item ${location.pathname.startsWith('/admin/users') ? 'active' : ''}`}
                     onClick={closeMenu}

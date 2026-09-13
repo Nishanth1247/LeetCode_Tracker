@@ -19,6 +19,9 @@ import AdminSolvedProblems from './pages/AdminSolvedProblems';
 import ChallengeProgressDetails from './pages/ChallengeProgressDetails';
 import AdminStreaks from './pages/AdminStreaks';
 import AdminUsers from './pages/AdminUsers';
+import AdminTeamPerformance from './pages/AdminTeamPerformance';
+import AdminMemberPerformance from './pages/AdminMemberPerformance';
+import AdminMemberPerformanceDetail from './pages/AdminMemberPerformanceDetail';
 
 // Root redirect handler based on role
 const HomeRedirect = () => {
@@ -125,6 +128,30 @@ function AppRoutes() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/team-performance"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminTeamPerformance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/member-performance"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminMemberPerformance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/member-performance/:userId"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminMemberPerformanceDetail />
               </ProtectedRoute>
             }
           />

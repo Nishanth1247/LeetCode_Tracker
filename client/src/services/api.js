@@ -188,6 +188,38 @@ export const getAdminSyncStatus = async () => {
   return res.data;
 };
 
+// Member Personal Goals & Performance helpers (V11)
+export const getMyGoals = async () => {
+  const res = await api.get('/goals/me');
+  return res.data;
+};
+
+export const updateMyGoals = async (data) => {
+  const res = await api.put('/goals/me', data);
+  return res.data;
+};
+
+export const getMyPerformanceSummary = async () => {
+  const res = await api.get('/analytics/me/performance');
+  return res.data;
+};
+
+// Admin Team & Member Performance helpers (V11)
+export const getAdminTeamPerformance = async () => {
+  const res = await api.get('/admin/team-performance');
+  return res.data;
+};
+
+export const getAdminMemberPerformance = async () => {
+  const res = await api.get('/admin/member-performance');
+  return res.data;
+};
+
+export const getAdminMemberPerformanceDetail = async (userId) => {
+  const res = await api.get(`/admin/member-performance/${userId}`);
+  return res.data;
+};
+
 // Admin User Management helpers
 export const getAdminDashboardOverview = async () => {
   const res = await api.get('/admin/dashboard');
