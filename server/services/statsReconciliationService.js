@@ -2,10 +2,20 @@ const { pool } = require('../config/db');
 
 /**
  * Reconciles stored user statistics (leetcode_total_solved, leetcode_easy_solved, etc.)
- * using unique problem counting: COUNT(DISTINCT problem_slug) per user and per difficulty.
+ * Ensures that incomplete local submission history never overwrites or decreases an existing higher valid LeetCode solved total.
  */
 async function reconcileUserStats(userId) {
-  // Query unique submissions for the user
+  // 1. Fetch current stored stats from users table
+  const [users] = await pool.query(
+    `SELECT leetcode_total_solved, leetcode_easy_solved, leetcode_medium_solved, leetcode_hard_solved
+     FROM users WHERE id = ?`,
+    [userId]
+  );
+
+  if (users.length === 0) return null;
+  const currentUser = users[0];
+
+  // 2. Query unique submissions stored in leetcode_submissions for this user
   const [submissions] = await pool.query(
     `SELECT DISTINCT problem_slug, difficulty 
      FROM leetcode_submissions 
@@ -13,33 +23,54 @@ async function reconcileUserStats(userId) {
     [userId]
   );
 
-  const totalSolved = submissions.length;
-  let easySolved = 0;
-  let mediumSolved = 0;
-  let hardSolved = 0;
+  const localTotal = submissions.length;
+  let localEasy = 0;
+  let localMedium = 0;
+  let localHard = 0;
 
   submissions.forEach((s) => {
     const diff = s.difficulty ? s.difficulty.toUpperCase() : '';
-    if (diff === 'EASY') easySolved++;
-    else if (diff === 'MEDIUM') mediumSolved++;
-    else if (diff === 'HARD') hardSolved++;
+    if (diff === 'EASY') localEasy++;
+    else if (diff === 'MEDIUM') localMedium++;
+    else if (diff === 'HARD') localHard++;
   });
 
-  await pool.query(
-    `UPDATE users 
-     SET leetcode_total_solved = ?,
-         leetcode_easy_solved = ?,
-         leetcode_medium_solved = ?,
-         leetcode_hard_solved = ?
-     WHERE id = ?`,
-    [totalSolved, easySolved, mediumSolved, hardSolved, userId]
-  );
+  // 3. Determine safe values:
+  // Use local submission unique count IF local count is higher than current stored stats (e.g. accumulated history over time),
+  // OR if current stored stats are null/0. Otherwise, preserve the official LeetCode stats provided directly by sync.
+  const currentTotal = currentUser.leetcode_total_solved || 0;
+  const currentEasy = currentUser.leetcode_easy_solved || 0;
+  const currentMedium = currentUser.leetcode_medium_solved || 0;
+  const currentHard = currentUser.leetcode_hard_solved || 0;
 
-  return { totalSolved, easySolved, mediumSolved, hardSolved };
+  const finalTotal = Math.max(currentTotal, localTotal);
+  const finalEasy = Math.max(currentEasy, localEasy);
+  const finalMedium = Math.max(currentMedium, localMedium);
+  const finalHard = Math.max(currentHard, localHard);
+
+  // 4. Update users table only if values changed
+  if (
+    finalTotal !== currentTotal ||
+    finalEasy !== currentEasy ||
+    finalMedium !== currentMedium ||
+    finalHard !== currentHard
+  ) {
+    await pool.query(
+      `UPDATE users 
+       SET leetcode_total_solved = ?,
+           leetcode_easy_solved = ?,
+           leetcode_medium_solved = ?,
+           leetcode_hard_solved = ?
+       WHERE id = ?`,
+      [finalTotal, finalEasy, finalMedium, finalHard, userId]
+    );
+  }
+
+  return { totalSolved: finalTotal, easySolved: finalEasy, mediumSolved: finalMedium, hardSolved: finalHard };
 }
 
 /**
- * Reconciles all connected MEMBER accounts in the database.
+ * Reconciles all connected MEMBER accounts in the database safely.
  */
 async function reconcileAllUsersStats() {
   const [members] = await pool.query(
