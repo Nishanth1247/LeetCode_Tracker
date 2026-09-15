@@ -24,13 +24,19 @@ const MemberDashboard = () => {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
 
-  // V11 Goals & Performance Summary state
-  const [goalsData, setGoalsData] = useState(null);
-  const [performanceData, setPerformanceData] = useState(null);
-  const [showGoalModal, setShowGoalModal] = useState(false);
-  const [monthlyInput, setMonthlyInput] = useState('30');
-  const [dailyInput, setDailyInput] = useState('1');
-  const [savingGoals, setSavingGoals] = useState(false);
+  // V12 Sync Notice Modal state
+  const [showSyncNoticeModal, setShowSyncNoticeModal] = useState(false);
+
+  // Handle ESC key for Sync Notice modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showSyncNoticeModal) {
+        setShowSyncNoticeModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSyncNoticeModal]);
 
   useEffect(() => {
     fetchStats();
@@ -216,6 +222,22 @@ const MemberDashboard = () => {
       <div className="dashboard-header">
         <h1>My Dashboard</h1>
         <p className="welcome-subtitle">Welcome back, <strong>{user?.name}</strong>!</p>
+      </div>
+
+      {/* V12 Automatic Sync Notice Banner */}
+      <div className="card" style={{ marginBottom: '1.25rem', padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>LeetCode Sync Updates</span>
+          <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>• Statistics are updated automatically in the background (~hourly).</span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setShowSyncNoticeModal(true)}
+          style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
+        >
+          View Details
+        </button>
       </div>
 
       {error && (
@@ -448,6 +470,10 @@ const MemberDashboard = () => {
                     <span className="stat-number text-easy">{performanceData.longestStreak} days</span>
                   </div>
                   <div className="stat-box">
+                    <span className="stat-title">Inactive (This Week)</span>
+                    <span className="stat-number text-hard">{performanceData.inactiveDays ?? 0} {performanceData.inactiveDays === 1 ? 'day' : 'days'}</span>
+                  </div>
+                  <div className="stat-box">
                     <span className="stat-title">Active Days (Month)</span>
                     <span className="stat-number highlight-total">{performanceData.activeDaysThisMonth} days</span>
                   </div>
@@ -599,6 +625,68 @@ const MemberDashboard = () => {
                 <p>No recent accepted submissions found.</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* V12 Sync Notice Modal */}
+      {showSyncNoticeModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowSyncNoticeModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sync-notice-modal-title"
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 id="sync-notice-modal-title">Why was Sync Now removed?</h3>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowSyncNoticeModal(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: '0.92rem', color: 'var(--muted)', marginBottom: '1rem' }}>
+                The manual <strong>Sync Now</strong> button was removed because it did not always provide a reliable or immediate response.
+              </p>
+              <p style={{ fontSize: '0.92rem', color: 'var(--muted)', marginBottom: '1.25rem' }}>
+                Your LeetCode statistics are now updated automatically in the background, so you no longer need to manually synchronize your account.
+              </p>
+
+              <h4 className="modal-section-title">What we implemented</h4>
+              <ul className="modal-list">
+                <li>Automatic LeetCode synchronization</li>
+                <li>Background updates for connected members</li>
+                <li>Automatic statistics updates</li>
+                <li>Recent activity synchronization</li>
+                <li>Submission history tracking</li>
+                <li>Progress and challenge calculations based on stored submission data</li>
+                <li>No manual action is required</li>
+              </ul>
+
+              <h4 className="modal-section-title">How often is data updated?</h4>
+              <p style={{ fontSize: '0.88rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                Automatic synchronization runs approximately every hour.
+              </p>
+              <p style={{ fontSize: '0.88rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+                Your dashboard displays the latest successfully synchronized data.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowSyncNoticeModal(false)}
+                style={{ width: 'auto', padding: '0.5rem 1.25rem' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

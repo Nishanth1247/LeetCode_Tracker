@@ -18,14 +18,46 @@ exports.getLeaderboard = async (req, res) => {
       querySQL += ` AND leaderboard_opt_in = TRUE `;
     }
 
-    querySQL += ` ORDER BY leetcode_total_solved DESC, leetcode_medium_solved DESC, leetcode_hard_solved DESC`;
-
     const [rows] = await pool.query(querySQL);
 
-    const formattedRows = rows.map((r) => ({
-      ...r,
-      leaderboard_opt_in: Boolean(r.leaderboard_opt_in),
-    }));
+    const formattedRows = rows.map((r) => {
+      const easy = r.leetcode_easy_solved || 0;
+      const medium = r.leetcode_medium_solved || 0;
+      const hard = r.leetcode_hard_solved || 0;
+      const leaderboardScore = (easy * 1) + (medium * 2.5) + (hard * 5);
+
+      return {
+        ...r,
+        leetcode_total_solved: r.leetcode_total_solved || 0,
+        leetcode_easy_solved: easy,
+        leetcode_medium_solved: medium,
+        leetcode_hard_solved: hard,
+        leaderboardScore,
+        leaderboard_opt_in: Boolean(r.leaderboard_opt_in),
+      };
+    });
+
+    // Deterministic sorting:
+    // 1. leaderboardScore DESC
+    // 2. leetcode_medium_solved DESC
+    // 3. leetcode_hard_solved DESC
+    // 4. leetcode_total_solved DESC
+    // 5. name ASC
+    formattedRows.sort((a, b) => {
+      if (b.leaderboardScore !== a.leaderboardScore) {
+        return b.leaderboardScore - a.leaderboardScore;
+      }
+      if (b.leetcode_medium_solved !== a.leetcode_medium_solved) {
+        return b.leetcode_medium_solved - a.leetcode_medium_solved;
+      }
+      if (b.leetcode_hard_solved !== a.leetcode_hard_solved) {
+        return b.leetcode_hard_solved - a.leetcode_hard_solved;
+      }
+      if (b.leetcode_total_solved !== a.leetcode_total_solved) {
+        return b.leetcode_total_solved - a.leetcode_total_solved;
+      }
+      return a.name.localeCompare(b.name);
+    });
 
     return res.status(200).json({
       success: true,
@@ -39,3 +71,4 @@ exports.getLeaderboard = async (req, res) => {
     });
   }
 };
+

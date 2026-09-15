@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { calculateWeeklyInactivity } = require('../services/activityService');
 
 exports.getMyAnalytics = async (req, res) => {
   try {
@@ -246,6 +247,9 @@ exports.getMyPerformance = async (req, res) => {
       }
     }
 
+    // 4. Calculate weekly inactivity (Mon-Sun)
+    const { inactiveDays } = calculateWeeklyInactivity(dateSet);
+
     return res.status(200).json({
       success: true,
       data: {
@@ -256,6 +260,7 @@ exports.getMyPerformance = async (req, res) => {
         longestStreak,
         activeDaysThisMonth,
         avgProblemsPerActiveDay,
+        inactiveDays,
       },
     });
   } catch (error) {

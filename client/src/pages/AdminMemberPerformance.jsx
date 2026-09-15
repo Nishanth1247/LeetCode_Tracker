@@ -196,6 +196,7 @@ const AdminMemberPerformance = () => {
                   <th>Total Solved</th>
                   <th>Solved (Month)</th>
                   <th>Active Days</th>
+                  <th>Inactive (Week)</th>
                   <th>Current Streak</th>
                   <th>Monthly Goal</th>
                   <th>Goal Progress</th>
@@ -225,6 +226,7 @@ const AdminMemberPerformance = () => {
                     </td>
                     <td className="text-easy">{m.solvedThisMonth}</td>
                     <td>{m.activeDays} d</td>
+                    <td className="text-hard">{m.inactiveDays ?? 0} d</td>
                     <td className="text-medium">🔥 {m.currentStreak} d</td>
                     <td>{m.monthlyGoal ? `${m.monthlyGoal} probs` : <span style={{ color: 'var(--muted)' }}>No Goal</span>}</td>
                     <td>

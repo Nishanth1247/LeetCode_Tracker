@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { calculateWeeklyInactivity } = require('../services/activityService');
 
 // Helper to calculate streak metrics for a single member
 function calculateMemberStreak(datesAsc) {
@@ -249,6 +250,10 @@ exports.getAdminMemberPerformance = async (req, res) => {
       const datesAsc = userSubs.map((s) => s.solveDate);
       const { currentStreak, longestStreak } = calculateMemberStreak(datesAsc);
 
+      // Inactivity this week
+      const dateSet = new Set(datesAsc.filter(Boolean));
+      const { inactiveDays } = calculateWeeklyInactivity(dateSet);
+
       // Monthly Goal Progress
       const monthlyGoal = m.monthlyGoal || null;
       const monthlyGoalPct = monthlyGoal ? Math.min(100, Math.round((solvedThisMonth / monthlyGoal) * 100)) : null;
@@ -275,6 +280,7 @@ exports.getAdminMemberPerformance = async (req, res) => {
         totalSolved: m.totalSolved || 0,
         solvedThisMonth,
         activeDays,
+        inactiveDays,
         currentStreak,
         longestStreak,
         monthlyGoal,
@@ -383,6 +389,9 @@ exports.getAdminMemberPerformanceDetail = async (req, res) => {
     const datesAsc = submissions.map((s) => s.solveDate).filter(Boolean);
     const { currentStreak, longestStreak } = calculateMemberStreak(datesAsc);
 
+    const dateSet = new Set(datesAsc);
+    const { inactiveDays, daysBreakdown } = calculateWeeklyInactivity(dateSet);
+
     return res.status(200).json({
       success: true,
       message: 'Member performance details fetched successfully.',
@@ -403,6 +412,10 @@ exports.getAdminMemberPerformanceDetail = async (req, res) => {
         streaks: {
           currentStreak: currentStreak || 0,
           longestStreak: longestStreak || 0,
+        },
+        inactivity: {
+          inactiveDays: inactiveDays || 0,
+          daysBreakdown: daysBreakdown || [],
         },
         goals: {
           monthlyGoal,

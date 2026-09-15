@@ -75,7 +75,7 @@ const AdminMemberPerformanceDetail = () => {
     );
   }
 
-  const { profile, streaks, goals, recentSubmissions } = detailData;
+  const { profile, streaks, goals, inactivity, recentSubmissions } = detailData;
 
   return (
     <div className="dashboard-container">
@@ -148,18 +148,44 @@ const AdminMemberPerformanceDetail = () => {
                 <span className="stat-number text-easy">{streaks.longestStreak} d</span>
               </div>
               <div className="stat-box">
+                <span className="stat-title">Inactive (Week)</span>
+                <span className="stat-number text-hard">{inactivity?.inactiveDays ?? 0} d</span>
+              </div>
+              <div className="stat-box">
                 <span className="stat-title">Monthly Goal</span>
                 <span className="stat-number highlight-total">
                   {goals.monthlyGoal ? `${goals.monthlyGoal} p` : 'None'}
                 </span>
               </div>
-              <div className="stat-box">
-                <span className="stat-title">Daily Goal</span>
-                <span className="stat-number text-medium">
-                  {goals.dailyGoal ? `${goals.dailyGoal} p/d` : 'None'}
-                </span>
-              </div>
             </div>
+
+            {/* Weekly Activity Breakdown */}
+            {inactivity?.daysBreakdown && inactivity.daysBreakdown.length > 0 && (
+              <div style={{ marginBottom: '1rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: '0.4rem' }}>
+                  Weekly Activity Breakdown (Mon–Today):
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {inactivity.daysBreakdown.map((item) => (
+                    <div
+                      key={item.date}
+                      style={{
+                        padding: '0.3rem 0.6rem',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: item.active ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        border: `1px solid ${item.active ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        color: item.active ? 'var(--status-easy)' : 'var(--status-hard)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <span>{item.day}</span> {item.active ? '✓' : '—'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {goals.monthlyGoal && (
               <div>

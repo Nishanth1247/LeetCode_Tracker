@@ -204,10 +204,11 @@ const Leaderboard = () => {
                   <th style={{ width: '80px', textAlign: 'center' }}>Rank</th>
                   <th>Member</th>
                   <th>LeetCode Username</th>
+                  <th>Points</th>
+                  <th>Easy (1x)</th>
+                  <th>Medium (2.5x)</th>
+                  <th>Hard (5x)</th>
                   <th>Total Solved</th>
-                  <th>Easy</th>
-                  <th>Medium</th>
-                  <th>Hard</th>
                   <th>Last Synced</th>
                 </tr>
               </thead>
@@ -215,6 +216,9 @@ const Leaderboard = () => {
                 {leaderboard.map((member, index) => {
                   const rank = index + 1;
                   const isCurrentUser = user && user.id === member.id;
+                  const pts = member.leaderboardScore !== undefined
+                    ? member.leaderboardScore
+                    : (member.leetcode_easy_solved || 0) * 1 + (member.leetcode_medium_solved || 0) * 2.5 + (member.leetcode_hard_solved || 0) * 5;
 
                   return (
                     <tr
@@ -234,11 +238,14 @@ const Leaderboard = () => {
                         <span className="username-tag">@{member.leetcode_username}</span>
                       </td>
                       <td className="font-semibold">
-                        <span className="highlight-total">{member.leetcode_total_solved}</span>
+                        <span className="highlight-total" style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                          {Number(pts).toFixed(1)} pts
+                        </span>
                       </td>
                       <td className="text-easy">{member.leetcode_easy_solved}</td>
                       <td className="text-medium">{member.leetcode_medium_solved}</td>
                       <td className="text-hard">{member.leetcode_hard_solved}</td>
+                      <td className="font-semibold">{member.leetcode_total_solved}</td>
                       <td className="sync-time">{formatLastSynced(member.leetcode_last_synced)}</td>
                     </tr>
                   );
