@@ -61,14 +61,19 @@ exports.getAdminSubmissions = async (req, res) => {
       [userId, fromStr, toStr]
     );
 
+    const seenSlugs = new Set();
     let easyCount = 0;
     let mediumCount = 0;
     let hardCount = 0;
 
     const formattedProblems = rows.map((r) => {
-      if (r.difficulty === 'EASY') easyCount++;
-      if (r.difficulty === 'MEDIUM') mediumCount++;
-      if (r.difficulty === 'HARD') hardCount++;
+      if (!seenSlugs.has(r.slug)) {
+        seenSlugs.add(r.slug);
+        const diff = r.difficulty ? r.difficulty.toUpperCase() : '';
+        if (diff === 'EASY') easyCount++;
+        else if (diff === 'MEDIUM') mediumCount++;
+        else if (diff === 'HARD') hardCount++;
+      }
 
       return {
         title: r.title,
@@ -93,7 +98,7 @@ exports.getAdminSubmissions = async (req, res) => {
           to,
         },
         summary: {
-          total: formattedProblems.length,
+          total: seenSlugs.size,
           easy: easyCount,
           medium: mediumCount,
           hard: hardCount,

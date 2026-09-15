@@ -97,6 +97,13 @@ const Navbar = () => {
                     Member Performance
                   </Link>
                   <Link
+                    to="/admin/language-analytics"
+                    className={`nav-item ${location.pathname.startsWith('/admin/language-analytics') ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    Language Analytics
+                  </Link>
+                  <Link
                     to="/admin/users"
                     className={`nav-item ${location.pathname.startsWith('/admin/users') ? 'active' : ''}`}
                     onClick={closeMenu}

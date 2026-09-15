@@ -4,6 +4,7 @@ const adminSubmissionController = require('../controllers/adminSubmissionControl
 const adminUserController = require('../controllers/adminUserController');
 const adminDashboardController = require('../controllers/adminDashboardController');
 const adminPerformanceController = require('../controllers/adminPerformanceController');
+const adminLanguageController = require('../controllers/adminLanguageController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 
 // ADMIN ONLY endpoint for Dashboard 2.0 aggregated overview
@@ -13,6 +14,9 @@ router.get('/dashboard', verifyToken, requireAdmin, adminDashboardController.get
 router.get('/team-performance', verifyToken, requireAdmin, adminPerformanceController.getAdminTeamPerformance);
 router.get('/member-performance', verifyToken, requireAdmin, adminPerformanceController.getAdminMemberPerformance);
 router.get('/member-performance/:userId', verifyToken, requireAdmin, adminPerformanceController.getAdminMemberPerformanceDetail);
+
+// ADMIN ONLY endpoint for Member Language Analytics (V12.1)
+router.get('/language-analytics/:userId', verifyToken, requireAdmin, adminLanguageController.getAdminMemberLanguageAnalytics);
 
 // ADMIN ONLY endpoints for User Management
 router.get('/users', verifyToken, requireAdmin, adminUserController.getAdminUsers);

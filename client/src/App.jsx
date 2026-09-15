@@ -22,6 +22,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminTeamPerformance from './pages/AdminTeamPerformance';
 import AdminMemberPerformance from './pages/AdminMemberPerformance';
 import AdminMemberPerformanceDetail from './pages/AdminMemberPerformanceDetail';
+import AdminLanguageAnalytics from './pages/AdminLanguageAnalytics';
 
 // Root redirect handler based on role
 const HomeRedirect = () => {
@@ -152,6 +153,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminMemberPerformanceDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/language-analytics"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminLanguageAnalytics />
               </ProtectedRoute>
             }
           />

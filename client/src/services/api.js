@@ -246,4 +246,10 @@ export const deleteAdminUser = async (id) => {
   return res.data;
 };
 
+// Admin Member Language Analytics helper (V12.1)
+export const getAdminMemberLanguageAnalytics = async (userId) => {
+  const res = await api.get(`/admin/language-analytics/${userId}`);
+  return res.data;
+};
+
 export default api;

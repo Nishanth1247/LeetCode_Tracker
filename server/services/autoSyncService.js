@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const leetcodeService = require('./leetcodeService');
+const { reconcileUserStats, reconcileAllUsersStats } = require('./statsReconciliationService');
 
 // In-memory status for monitoring
 let syncStatus = {
@@ -145,6 +146,13 @@ async function syncSingleMember(user) {
     console.error(`[AutoSync] Non-fatal submission sync error for user ID ${userId}:`, subErr.message);
   }
 
+  // 6. Reconcile user statistics with unique solved problems count
+  try {
+    await reconcileUserStats(userId);
+  } catch (recErr) {
+    console.error(`[AutoSync] Non-fatal reconciliation error for user ID ${userId}:`, recErr.message);
+  }
+
   return true;
 }
 
@@ -211,6 +219,11 @@ function startAutoSyncScheduler() {
   const ONE_HOUR = 60 * 60 * 1000;
   console.log('[AutoSync] Initializing background hourly sync scheduler...');
   
+  // Reconcile stats immediately on startup
+  reconcileAllUsersStats().catch((err) =>
+    console.error('[AutoSync] Startup reconciliation error:', err.message)
+  );
+
   // Trigger initial sync 30s after server startup so DB connection is established
   setTimeout(() => {
     syncAllConnectedMembers().catch((err) =>
