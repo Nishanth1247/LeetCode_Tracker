@@ -375,7 +375,358 @@ exports.getMyChallenges = async (req, res) => {
   }
 };
 
-// GET CHALLENGE PROGRESS (V8.2 Submission-Based with Snapshot Fallback)
+// MEMBER or TEAM LEADER: Create Individual Task(s) for Team Members
+exports.createIndividualChallenge = async (req, res) => {
+  try {
+    const { assignedTo, title, description, difficulty, target, startDate, endDate } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole !== 'MEMBER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Team Leaders (MEMBER role) can create individual task assignments.',
+      });
+    }
+
+    // Verify current user is a Team Leader
+    const [ledTeams] = await pool.query('SELECT id FROM teams WHERE leader_id = ?', [userId]);
+    if (ledTeams.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not assigned as a Team Leader of any team.',
+      });
+    }
+
+    const teamId = ledTeams[0].id;
+
+    if (!assignedTo || !title || !title.trim() || !difficulty || !target || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'assignedTo, title, difficulty, target, start date, and end date are required.',
+      });
+    }
+
+    const cleanTitle = title.trim();
+    const cleanDesc = description ? description.trim() : null;
+
+    if (!['EASY', 'MEDIUM', 'HARD', 'MIXED'].includes(difficulty)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid difficulty. Must be EASY, MEDIUM, HARD, or MIXED.',
+      });
+    }
+
+    const targetNum = parseInt(target, 10);
+    if (isNaN(targetNum) || targetNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Target must be greater than 0.',
+      });
+    }
+
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be before start date.',
+      });
+    }
+
+    // Process assignedTo into an array of user IDs
+    let targetMemberIds = [];
+    if (Array.isArray(assignedTo)) {
+      targetMemberIds = assignedTo.map((id) => parseInt(id, 10));
+    } else {
+      targetMemberIds = [parseInt(assignedTo, 10)];
+    }
+
+    if (targetMemberIds.length === 0 || targetMemberIds.some(isNaN)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid member assignment list.',
+      });
+    }
+
+    // Verify all assigned member IDs belong to the leader's team
+    const [teamMembers] = await pool.query(
+      `SELECT tm.user_id, u.role, u.name 
+       FROM team_members tm
+       JOIN users u ON tm.user_id = u.id
+       WHERE tm.team_id = ? AND tm.user_id IN (?)`,
+      [teamId, targetMemberIds]
+    );
+
+    if (teamMembers.length !== targetMemberIds.length) {
+      return res.status(403).json({
+        success: false,
+        message: 'One or more assigned members do not belong to your team.',
+      });
+    }
+
+    for (const tm of teamMembers) {
+      if (tm.role !== 'MEMBER') {
+        return res.status(400).json({
+          success: false,
+          message: `User '${tm.name}' is an ADMIN and cannot receive task assignments.`,
+        });
+      }
+    }
+
+    const createdIds = [];
+
+    // Create individual assignment row per assigned member
+    for (const memberId of targetMemberIds) {
+      const [result] = await pool.query(
+        `INSERT INTO team_challenges 
+         (team_id, title, description, difficulty, target, start_date, end_date, created_by, assigned_to, assignment_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INDIVIDUAL')`,
+        [teamId, cleanTitle, cleanDesc, difficulty, targetNum, startDate, endDate, userId, memberId]
+      );
+      createdIds.push(result.insertId);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `${createdIds.length} individual task assignment(s) created successfully.`,
+      data: {
+        createdCount: createdIds.length,
+        taskIds: createdIds,
+        teamId,
+        title: cleanTitle,
+        target: targetNum,
+        difficulty,
+      },
+    });
+  } catch (error) {
+    console.error('createIndividualChallenge error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create individual task assignment.',
+    });
+  }
+};
+
+// TEAM LEADER: Update individual task assignment
+exports.updateIndividualChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, difficulty, target, startDate, endDate } = req.body;
+    const userId = req.user.id;
+
+    // Check challenge existence & assignment_type
+    const [challenges] = await pool.query(
+      `SELECT c.id, c.team_id, c.assignment_type, t.leader_id
+       FROM team_challenges c
+       JOIN teams t ON c.team_id = t.id
+       WHERE c.id = ?`,
+      [id]
+    );
+
+    if (challenges.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task assignment not found.',
+      });
+    }
+
+    const challenge = challenges[0];
+
+    if (challenge.assignment_type !== 'INDIVIDUAL') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only INDIVIDUAL task assignments can be updated with this endpoint.',
+      });
+    }
+
+    if (challenge.leader_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not the Team Leader of the team associated with this task.',
+      });
+    }
+
+    const newTitle = title ? title.trim() : undefined;
+    const newDesc = description !== undefined ? description.trim() : undefined;
+    const newTarget = target ? parseInt(target, 10) : undefined;
+    const newDifficulty = difficulty;
+    const newStartDate = startDate;
+    const newEndDate = endDate;
+
+    if (newTarget && (isNaN(newTarget) || newTarget <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Target must be greater than 0.',
+      });
+    }
+
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be before start date.',
+      });
+    }
+
+    await pool.query(
+      `UPDATE team_challenges
+       SET title = COALESCE(?, title),
+           description = COALESCE(?, description),
+           difficulty = COALESCE(?, difficulty),
+           target = COALESCE(?, target),
+           start_date = COALESCE(?, start_date),
+           end_date = COALESCE(?, end_date)
+       WHERE id = ?`,
+      [newTitle, newDesc, newDifficulty, newTarget, newStartDate, newEndDate, id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Individual task updated successfully.',
+    });
+  } catch (error) {
+    console.error('updateIndividualChallenge error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update individual task assignment.',
+    });
+  }
+};
+
+// TEAM LEADER: Delete individual task assignment
+exports.deleteIndividualChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const [challenges] = await pool.query(
+      `SELECT c.id, c.assignment_type, t.leader_id
+       FROM team_challenges c
+       JOIN teams t ON c.team_id = t.id
+       WHERE c.id = ?`,
+      [id]
+    );
+
+    if (challenges.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task assignment not found.',
+      });
+    }
+
+    const challenge = challenges[0];
+
+    if (challenge.assignment_type !== 'INDIVIDUAL') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only INDIVIDUAL task assignments can be deleted by Team Leaders.',
+      });
+    }
+
+    if (challenge.leader_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not the Team Leader of the team associated with this task.',
+      });
+    }
+
+    await pool.query('DELETE FROM team_challenges WHERE id = ?', [id]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Individual task assignment deleted successfully.',
+    });
+  } catch (error) {
+    console.error('deleteIndividualChallenge error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete individual task assignment.',
+    });
+  }
+};
+
+// MEMBER: Get challenges for authenticated member's team (Team Tasks & My Individual Tasks)
+exports.getMyChallenges = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [assignments] = await pool.query(
+      'SELECT tm.team_id, t.leader_id FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE tm.user_id = ?',
+      [userId]
+    );
+
+    if (assignments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          teamTasks: [],
+          individualTasks: [],
+        },
+      });
+    }
+
+    const teamId = assignments[0].team_id;
+    const isLeader = assignments[0].leader_id === userId;
+
+    let querySQL = `
+      SELECT id, title, description, difficulty, target, start_date as startDate, end_date as endDate, status,
+             assignment_type as assignmentType, assigned_to as assignedTo, created_by as createdBy
+      FROM team_challenges
+      WHERE team_id = ?
+    `;
+    let queryParams = [teamId];
+
+    if (!isLeader) {
+      querySQL += ` AND (assignment_type = 'TEAM' OR assigned_to = ?)`;
+      queryParams.push(userId);
+    }
+
+    querySQL += ` ORDER BY start_date DESC`;
+
+    const [challenges] = await pool.query(querySQL, queryParams);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const teamTasks = [];
+    const individualTasks = [];
+
+    challenges.forEach((c) => {
+      let calcStatus = c.status;
+      const endStr = new Date(c.endDate).toISOString().split('T')[0];
+      if (todayStr > endStr && c.status !== 'COMPLETED') {
+        calcStatus = 'EXPIRED';
+      }
+
+      const item = {
+        ...c,
+        status: calcStatus,
+      };
+
+      if (c.assignmentType === 'INDIVIDUAL') {
+        individualTasks.push(item);
+      } else {
+        teamTasks.push(item);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        isLeader,
+        teamTasks,
+        individualTasks,
+        // Legacy list for backwards compatibility
+        all: [...teamTasks, ...individualTasks],
+      },
+    });
+  } catch (error) {
+    console.error('getMyChallenges error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch team challenges.',
+    });
+  }
+};
+
+// GET CHALLENGE PROGRESS (V8.2 Submission-Based with Snapshot Fallback & Individual Task Support)
 exports.getChallengeProgress = async (req, res) => {
   try {
     const { id } = req.params;
@@ -384,9 +735,10 @@ exports.getChallengeProgress = async (req, res) => {
 
     // Fetch challenge details
     const [challenges] = await pool.query(
-      `SELECT c.id, c.team_id as teamId, t.name as teamName,
+      `SELECT c.id, c.team_id as teamId, t.name as teamName, t.leader_id as leaderId,
               c.title, c.description, c.difficulty, c.target,
-              c.start_date as startDate, c.end_date as endDate, c.status
+              c.start_date as startDate, c.end_date as endDate, c.status,
+              c.assignment_type as assignmentType, c.assigned_to as assignedTo
        FROM team_challenges c
        JOIN teams t ON c.team_id = t.id
        WHERE c.id = ?`,
@@ -415,6 +767,27 @@ exports.getChallengeProgress = async (req, res) => {
           message: 'You do not have access to this team challenge.',
         });
       }
+
+      // For INDIVIDUAL task: only assigned member or team leader or admin can view detail
+      if (
+        challenge.assignmentType === 'INDIVIDUAL' &&
+        challenge.assignedTo !== userId &&
+        challenge.leaderId !== userId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized to view this individual task progress.',
+        });
+      }
+    }
+
+    // Determine target members for progress calculation
+    let targetMemberFilter = `tm.team_id = ?`;
+    let queryParams = [challenge.teamId];
+
+    if (challenge.assignmentType === 'INDIVIDUAL' && challenge.assignedTo) {
+      targetMemberFilter = `tm.team_id = ? AND u.id = ?`;
+      queryParams.push(challenge.assignedTo);
     }
 
     // Get team members
@@ -423,8 +796,8 @@ exports.getChallengeProgress = async (req, res) => {
               u.leetcode_total_solved, u.leetcode_easy_solved, u.leetcode_medium_solved, u.leetcode_hard_solved
        FROM team_members tm
        JOIN users u ON tm.user_id = u.id
-       WHERE tm.team_id = ?`,
-      [challenge.teamId]
+       WHERE ${targetMemberFilter}`,
+      queryParams
     );
 
     const startDateStr = new Date(challenge.startDate).toISOString().split('T')[0] + ' 00:00:00';
@@ -438,7 +811,7 @@ exports.getChallengeProgress = async (req, res) => {
     let submissionRows = [];
 
     if (teamUserIds.length > 0) {
-      // Query submission history for team members within date window
+      // Query submission history for members within date window
       const [subs] = await pool.query(
         `SELECT id, user_id, problem_title as title, problem_slug as slug, difficulty, language, solved_at as solvedAt
          FROM leetcode_submissions
@@ -455,10 +828,8 @@ exports.getChallengeProgress = async (req, res) => {
     const teamDifficultyBreakdown = { easy: 0, medium: 0, hard: 0 };
 
     for (const member of teamMembers) {
-      // Filter submissions for this specific member
       const memberSubs = submissionRows.filter((s) => s.user_id === member.id);
 
-      // Deduplicate by problem_slug for member
       const seenSlugs = new Set();
       const uniqueMemberProbs = [];
       let easyCount = 0;
@@ -528,10 +899,8 @@ exports.getChallengeProgress = async (req, res) => {
       });
     }
 
-    // Sort members by solved descending
     membersProgress.sort((a, b) => b.solved - a.solved);
 
-    // Compute dynamic challenge status
     let dynamicStatus = 'ACTIVE';
     if (teamTotalSolved >= challenge.target) {
       dynamicStatus = 'COMPLETED';
@@ -558,6 +927,8 @@ exports.getChallengeProgress = async (req, res) => {
           status: dynamicStatus,
           teamName: challenge.teamName,
           teamId: challenge.teamId,
+          assignmentType: challenge.assignmentType,
+          assignedTo: challenge.assignedTo,
         },
         calculationMethod,
         progress: {

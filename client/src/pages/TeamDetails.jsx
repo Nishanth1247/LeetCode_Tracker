@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getTeamById,
+  updateTeam,
   addTeamMember,
   removeTeamMember,
   createChallenge,
   deleteChallenge,
   getTeamAnalytics,
-  getChallengeProgress,
 } from '../services/api';
 
 const TeamDetails = () => {
@@ -20,6 +20,9 @@ const TeamDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Leader state
+  const [updatingLeader, setUpdatingLeader] = useState(false);
 
   // Challenge modal states
   const [showChallengeModal, setShowChallengeModal] = useState(false);
@@ -45,7 +48,6 @@ const TeamDetails = () => {
         setTeam(teamRes.data);
       }
 
-      // Filter available connected members who are NOT in this team
       if (analyticsRes.success && analyticsRes.data.members) {
         const teamMemberIds = new Set((teamRes.data?.members || []).map((m) => m.id));
         const unassigned = analyticsRes.data.members.filter((m) => !teamMemberIds.has(m.id));
@@ -61,12 +63,32 @@ const TeamDetails = () => {
 
   useEffect(() => {
     fetchTeamData();
-    // Default dates for challenge form
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     setStartDate(today);
     setEndDate(nextWeek);
   }, [id]);
+
+  const handleLeaderChange = async (newLeaderId) => {
+    try {
+      setUpdatingLeader(true);
+      setError(null);
+      setSuccess(null);
+
+      const res = await updateTeam(id, {
+        leaderId: newLeaderId ? parseInt(newLeaderId, 10) : null,
+      });
+
+      if (res.success) {
+        setSuccess(newLeaderId ? 'Team Leader assigned.' : 'Team Leader removed.');
+        fetchTeamData();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update Team Leader.');
+    } finally {
+      setUpdatingLeader(false);
+    }
+  };
 
   const handleAddMember = async (e) => {
     e.preventDefault();
@@ -120,7 +142,7 @@ const TeamDetails = () => {
       });
 
       if (res.success) {
-        setSuccess('Challenge created for team!');
+        setSuccess('Team Task created successfully!');
         setTitle('');
         setDescription('');
         setShowChallengeModal(false);
@@ -176,6 +198,7 @@ const TeamDetails = () => {
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="welcome-subtitle">
             Created on {new Date(team.createdAt).toLocaleDateString()}
+            {team.leaderName && ` • Leader: ⭐ ${team.leaderName}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -184,7 +207,7 @@ const TeamDetails = () => {
             className="btn btn-primary"
             style={{ width: 'auto' }}
           >
-            + Create Challenge
+            + Create Team Task
           </button>
           <Link to="/admin/teams" className="btn btn-secondary" style={{ width: 'auto', textDecoration: 'none' }}>
             ← Back to Teams
@@ -195,19 +218,19 @@ const TeamDetails = () => {
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
-      {/* Create Challenge Modal / Form */}
+      {/* Create Team Task Modal / Form */}
       {showChallengeModal && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <div className="card-header">
-            <h3>Create Team Challenge for {team.name}</h3>
+            <h3>Create Team Task for {team.name}</h3>
           </div>
           <div className="card-body">
             <form onSubmit={handleCreateChallenge} className="connect-form">
               <div className="form-group">
-                <label>Challenge Title *</label>
+                <label>Task Title *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Easy September Challenge"
+                  placeholder="e.g. Team Alpha September Goal"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -218,7 +241,7 @@ const TeamDetails = () => {
                 <label>Description (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Solve 20 Easy problems this week"
+                  placeholder="e.g. Solve 50 problems as a team"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -281,7 +304,7 @@ const TeamDetails = () => {
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn btn-primary" disabled={submittingChallenge}>
-                  {submittingChallenge ? 'Creating...' : 'Assign Challenge'}
+                  {submittingChallenge ? 'Creating...' : 'Assign Team Task'}
                 </button>
                 <button
                   type="button"
@@ -300,7 +323,7 @@ const TeamDetails = () => {
       <div className="dashboard-grid">
         {/* Members List */}
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>Team Members ({team.members.length})</h3>
           </div>
           <div className="card-body">
@@ -326,7 +349,7 @@ const TeamDetails = () => {
                 ))}
               </select>
               <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={!selectedUserId}>
-                Add
+                Add Member
               </button>
             </form>
 
@@ -338,6 +361,7 @@ const TeamDetails = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Role / Status</th>
                       <th>LeetCode</th>
                       <th>Action</th>
                     </tr>
@@ -345,7 +369,32 @@ const TeamDetails = () => {
                   <tbody>
                     {team.members.map((m) => (
                       <tr key={m.id}>
-                        <td className="font-semibold">{m.name}</td>
+                        <td className="font-semibold">
+                          {m.name} {m.isLeader && <span title="Team Leader">⭐</span>}
+                        </td>
+                        <td>
+                          {m.isLeader ? (
+                            <span className="status-badge" style={{ backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04' }}>
+                              Team Leader
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleLeaderChange(m.id)}
+                              disabled={updatingLeader}
+                              style={{
+                                background: 'none',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '0.2rem 0.5rem',
+                                fontSize: '0.75rem',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Make Leader
+                            </button>
+                          )}
+                        </td>
                         <td>
                           {m.leetcodeUsername ? (
                             <span className="username-tag">@{m.leetcodeUsername}</span>
@@ -376,18 +425,23 @@ const TeamDetails = () => {
           </div>
         </div>
 
-        {/* Team Challenges */}
+        {/* Team Tasks & Individual Assignments */}
         <div className="card">
           <div className="card-header">
-            <h3>Team Challenges ({team.challenges.length})</h3>
+            <h3>Tasks & Assignments ({team.challenges.length})</h3>
           </div>
           <div className="card-body">
             {team.challenges.length === 0 ? (
-              <p className="not-connected-tag">No challenges created for this team yet.</p>
+              <p className="not-connected-tag">No tasks or assignments created for this team yet.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {team.challenges.map((c) => (
-                  <AdminChallengeItem key={c.id} challenge={c} onDelete={handleDeleteChallenge} />
+                  <AdminChallengeItem
+                    key={c.id}
+                    challenge={c}
+                    teamMembers={team.members}
+                    onDelete={handleDeleteChallenge}
+                  />
                 ))}
               </div>
             )}
@@ -398,7 +452,12 @@ const TeamDetails = () => {
   );
 };
 
-const AdminChallengeItem = ({ challenge, onDelete }) => {
+const AdminChallengeItem = ({ challenge, teamMembers, onDelete }) => {
+  const isIndividual = challenge.assignmentType === 'INDIVIDUAL';
+  const assignedMember = isIndividual
+    ? teamMembers.find((m) => m.id === challenge.assignedTo)
+    : null;
+
   return (
     <div
       style={{
@@ -410,12 +469,30 @@ const AdminChallengeItem = ({ challenge, onDelete }) => {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <Link
-            to={`/admin/challenges/${challenge.id}`}
-            style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}
-          >
-            {challenge.title}
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              className="status-badge"
+              style={{
+                backgroundColor: isIndividual ? 'rgba(168, 85, 247, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: isIndividual ? '#9333ea' : '#2563eb',
+                fontSize: '0.7rem',
+                textTransform: 'uppercase',
+              }}
+            >
+              {isIndividual ? 'INDIVIDUAL TASK' : 'TEAM TASK'}
+            </span>
+            <Link
+              to={`/admin/challenges/${challenge.id}`}
+              style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}
+            >
+              {challenge.title}
+            </Link>
+          </div>
+          {isIndividual && assignedMember && (
+            <p className="welcome-subtitle" style={{ marginTop: '0.2rem', color: 'var(--text-secondary)' }}>
+              Assigned to: <strong>{assignedMember.name}</strong>
+            </p>
+          )}
           {challenge.description && <p className="welcome-subtitle">{challenge.description}</p>}
         </div>
         <span

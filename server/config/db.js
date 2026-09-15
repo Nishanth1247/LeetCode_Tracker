@@ -16,7 +16,7 @@ const pool = mysql.createPool({
     : undefined
 });
 
-// Helper function to test DB connection and initialize user_goals schema if missing
+// Helper function to test DB connection and initialize schema extensions if missing
 async function testConnection() {
   try {
     const connection = await pool.getConnection();
@@ -33,6 +33,47 @@ async function testConnection() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Check & Add leader_id column to teams table if missing
+    const [teamCols] = await connection.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'teams' AND COLUMN_NAME = 'leader_id'
+    `);
+    if (teamCols.length === 0) {
+      await connection.query(`
+        ALTER TABLE teams 
+        ADD COLUMN leader_id INT NULL DEFAULT NULL,
+        ADD CONSTRAINT fk_teams_leader FOREIGN KEY (leader_id) REFERENCES users(id) ON DELETE SET NULL
+      `);
+    }
+
+    // Check & Add assigned_to column to team_challenges table if missing
+    const [challengeAssignedCols] = await connection.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'team_challenges' AND COLUMN_NAME = 'assigned_to'
+    `);
+    if (challengeAssignedCols.length === 0) {
+      await connection.query(`
+        ALTER TABLE team_challenges 
+        ADD COLUMN assigned_to INT NULL DEFAULT NULL,
+        ADD CONSTRAINT fk_challenges_assigned FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE CASCADE
+      `);
+    }
+
+    // Check & Add assignment_type column to team_challenges table if missing
+    const [challengeTypeCols] = await connection.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'team_challenges' AND COLUMN_NAME = 'assignment_type'
+    `);
+    if (challengeTypeCols.length === 0) {
+      await connection.query(`
+        ALTER TABLE team_challenges 
+        ADD COLUMN assignment_type ENUM('TEAM', 'INDIVIDUAL') NOT NULL DEFAULT 'TEAM'
+      `);
+    }
 
     connection.release();
     return true;

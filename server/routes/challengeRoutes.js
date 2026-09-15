@@ -3,8 +3,11 @@ const router = express.Router();
 const challengeController = require('../controllers/challengeController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 
-// MEMBER endpoints - declared before /:id routes
+// MEMBER / TEAM LEADER endpoints - declared before /:id routes
 router.get('/me', verifyToken, challengeController.getMyChallenges);
+router.post('/individual', verifyToken, challengeController.createIndividualChallenge);
+router.put('/individual/:id', verifyToken, challengeController.updateIndividualChallenge);
+router.delete('/individual/:id', verifyToken, challengeController.deleteIndividualChallenge);
 
 // ADMIN endpoints
 router.post('/', verifyToken, requireAdmin, challengeController.createChallenge);

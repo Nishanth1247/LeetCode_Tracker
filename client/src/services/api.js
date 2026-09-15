@@ -162,6 +162,21 @@ export const getMyChallenges = async () => {
   return res.data;
 };
 
+export const createIndividualChallenge = async (data) => {
+  const res = await api.post('/challenges/individual', data);
+  return res.data;
+};
+
+export const updateIndividualChallenge = async (id, data) => {
+  const res = await api.put(`/challenges/individual/${id}`, data);
+  return res.data;
+};
+
+export const deleteIndividualChallenge = async (id) => {
+  const res = await api.delete(`/challenges/individual/${id}`);
+  return res.data;
+};
+
 export const getChallengeProgress = async (id) => {
   const res = await api.get(`/challenges/${id}/progress`);
   return res.data;

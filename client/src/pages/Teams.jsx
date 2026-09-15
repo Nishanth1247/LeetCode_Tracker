@@ -13,6 +13,7 @@ const Teams = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [leaderId, setLeaderId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -28,11 +29,7 @@ const Teams = () => {
         setTeams(teamsRes.data || []);
       }
 
-      // Filter unassigned MEMBER users
       if (analyticsRes.success && analyticsRes.data.members) {
-        // Members list from team analytics
-        // Let's also fetch total members list or compute unassigned
-        // We will fetch unassigned members
         setUnassignedMembers(analyticsRes.data.members);
       }
     } catch (err) {
@@ -59,12 +56,14 @@ const Teams = () => {
       const res = await createTeam({
         name: teamName.trim(),
         memberIds: selectedMembers,
+        leaderId: leaderId ? parseInt(leaderId, 10) : null,
       });
 
       if (res.success) {
         setSuccess('Team created successfully!');
         setTeamName('');
         setSelectedMembers([]);
+        setLeaderId('');
         setShowCreateModal(false);
         fetchData();
       }
@@ -95,7 +94,11 @@ const Teams = () => {
 
   const toggleMemberSelection = (memberId) => {
     if (selectedMembers.includes(memberId)) {
-      setSelectedMembers(selectedMembers.filter((id) => id !== memberId));
+      const updated = selectedMembers.filter((id) => id !== memberId);
+      setSelectedMembers(updated);
+      if (parseInt(leaderId, 10) === memberId) {
+        setLeaderId('');
+      }
     } else {
       setSelectedMembers([...selectedMembers, memberId]);
     }
@@ -138,7 +141,7 @@ const Teams = () => {
           <div className="card-body">
             <form onSubmit={handleCreateTeam} className="connect-form">
               <div className="form-group">
-                <label>Team Name</label>
+                <label>Team Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. Team Alpha"
@@ -152,7 +155,7 @@ const Teams = () => {
                 <label>Initial Members (Optional)</label>
                 <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.5rem' }}>
                   {unassignedMembers.length === 0 ? (
-                    <p className="not-connected-tag">No connected members available.</p>
+                    <p className="not-connected-tag">No unassigned members available.</p>
                   ) : (
                     unassignedMembers.map((m) => (
                       <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', cursor: 'pointer' }}>
@@ -167,6 +170,33 @@ const Teams = () => {
                   )}
                 </div>
               </div>
+
+              {selectedMembers.length > 0 && (
+                <div className="form-group">
+                  <label>Select Team Leader (Optional)</label>
+                  <select
+                    value={leaderId}
+                    onChange={(e) => setLeaderId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.6rem',
+                      color: 'var(--text)',
+                    }}
+                  >
+                    <option value="">No leader assigned</option>
+                    {unassignedMembers
+                      .filter((m) => selectedMembers.includes(m.id))
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button
@@ -204,6 +234,12 @@ const Teams = () => {
                 <span className="user-profile-badge">{t.memberCount} Members</span>
               </div>
               <div className="card-body">
+                <div className="info-row">
+                  <span className="info-label">Team Leader</span>
+                  <span className="info-value font-semibold">
+                    {t.leaderName ? `⭐ ${t.leaderName}` : <span className="not-connected-tag">None</span>}
+                  </span>
+                </div>
                 <div className="info-row">
                   <span className="info-label">Active Challenges</span>
                   <span className="info-value">{t.activeChallengeCount}</span>
