@@ -237,7 +237,7 @@ const Teams = () => {
                 <div className="info-row">
                   <span className="info-label">Team Leader</span>
                   <span className="info-value font-semibold">
-                    {t.leaderName ? `⭐ ${t.leaderName}` : <span className="not-connected-tag">None</span>}
+                    {t.leaderName ? t.leaderName : <span className="not-connected-tag">None</span>}
                   </span>
                 </div>
                 <div className="info-row">

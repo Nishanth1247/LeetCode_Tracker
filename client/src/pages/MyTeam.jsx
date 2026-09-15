@@ -171,14 +171,14 @@ const MyTeam = () => {
             <h1 className="text-2xl font-bold">{team.name}</h1>
             {team.isLeader && (
               <span className="status-badge" style={{ backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04' }}>
-                ⭐ Team Leader
+                Team Leader
               </span>
             )}
           </div>
           <p className="welcome-subtitle">
             {team.isLeader
               ? 'You are Team Leader for this team. You can assign individual tasks.'
-              : `Team Leader: ${team.leaderName ? `⭐ ${team.leaderName}` : 'Unassigned'}`}
+              : `Team Leader: ${team.leaderName ? team.leaderName : 'Unassigned'}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -348,7 +348,7 @@ const MyTeam = () => {
                   <div className="activity-item-main">
                     <span className="activity-index">#{idx + 1}</span>
                     <span className="activity-title">
-                      {m.name} {m.isLeader && <span title="Team Leader">⭐</span>}
+                      {m.name} {m.isLeader && '(Leader)'}
                     </span>
                   </div>
                   {m.leetcodeUsername ? (
@@ -505,55 +505,76 @@ const MyTeam = () => {
                       </div>
                     </div>
 
-                    {/* Member Breakdown */}
-                    <div style={{ marginTop: '1.25rem' }}>
-                      <h4 className="activity-list-title">
-                        {isIndividual ? 'Assigned Member Progress' : 'Member Progress'}
-                      </h4>
-                      <div className="table-responsive">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Member</th>
-                              <th>Solved</th>
-                              <th>Remaining</th>
-                              <th>Progress</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {membersProgress.map((m) => (
-                              <tr key={m.userId}>
-                                <td className="font-semibold">{m.name}</td>
-                                <td>{m.solved}</td>
-                                <td>{m.remaining}</td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ flex: 1, height: '6px', backgroundColor: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-                                      <div style={{ width: `${m.percentage}%`, height: '100%', backgroundColor: 'var(--primary)' }}></div>
-                                    </div>
-                                    <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{m.percentage}%</span>
-                                  </div>
-                                </td>
+                    {/* Member Breakdown — Visible ONLY to Team Leaders & Admin */}
+                    {team.isLeader ? (
+                      <div style={{ marginTop: '1.25rem' }}>
+                        <h4 className="activity-list-title">
+                          {isIndividual ? 'Assigned Member Progress' : 'Member Progress Breakdown'}
+                        </h4>
+                        <div className="table-responsive">
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>Member</th>
+                                <th>Solved</th>
+                                <th>Remaining</th>
+                                <th>Progress</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {membersProgress.map((m) => (
+                                <tr key={m.userId}>
+                                  <td className="font-semibold">{m.name}</td>
+                                  <td>{m.solved}</td>
+                                  <td>{m.remaining}</td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      <div style={{ flex: 1, height: '6px', backgroundColor: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${m.percentage}%`, height: '100%', backgroundColor: 'var(--primary)' }}></div>
+                                      </div>
+                                      <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{m.percentage}%</span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* Normal Member View: Display strictly personal progress details */
+                      membersProgress.length > 0 && (
+                        <div style={{ marginTop: '1.25rem', backgroundColor: 'var(--surface-hover)', padding: '0.85rem', borderRadius: 'var(--radius-sm)' }}>
+                          <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.4rem' }}>My Progress Details</h4>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                            <span>Solved: <strong style={{ color: 'var(--text)' }}>{membersProgress[0].solved}</strong></span>
+                            <span>Remaining: <strong style={{ color: 'var(--text)' }}>{membersProgress[0].remaining}</strong></span>
+                            <span>My Target: <strong style={{ color: 'var(--text)' }}>{membersProgress[0].target}</strong></span>
+                            <span>My Completion: <strong style={{ color: 'var(--primary)' }}>{membersProgress[0].percentage}%</strong></span>
+                          </div>
+                        </div>
+                      )
+                    )}
 
-                    {/* Toggle View Contributed Problems */}
+                    {/* Toggle View Contributed Problems (Leader / Admin view all, Member views own) */}
                     <div style={{ marginTop: '1.25rem' }}>
                       <button
                         className="btn btn-secondary"
                         style={{ fontSize: '0.85rem', width: 'auto' }}
                         onClick={() => setExpandedChallengeId(isExpanded ? null : challenge.id)}
                       >
-                        {isExpanded ? 'Hide Contributed Problems ▲' : `View Contributed Problems (${problems.length}) ▼`}
+                        {isExpanded
+                          ? 'Hide Contributed Problems ▲'
+                          : team.isLeader
+                          ? `View Contributed Problems (${problems.length}) ▼`
+                          : `View My Solved Problems (${problems.length}) ▼`}
                       </button>
 
                       {isExpanded && (
                         <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                          <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Contributed Problems ({problems.length})</h4>
+                          <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                            {team.isLeader ? `Contributed Problems (${problems.length})` : `My Solved Problems (${problems.length})`}
+                          </h4>
                           {problems.length === 0 ? (
                             <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
                               No tracked submissions for this task yet.
@@ -563,7 +584,7 @@ const MyTeam = () => {
                               <table className="data-table">
                                 <thead>
                                   <tr>
-                                    <th>Member</th>
+                                    {team.isLeader && <th>Member</th>}
                                     <th>Title</th>
                                     <th>Difficulty</th>
                                     <th>Language</th>
@@ -573,7 +594,7 @@ const MyTeam = () => {
                                 <tbody>
                                   {problems.map((p, idx) => (
                                     <tr key={idx}>
-                                      <td>{p.userName}</td>
+                                      {team.isLeader && <td>{p.userName}</td>}
                                       <td className="font-semibold">{p.title}</td>
                                       <td>
                                         <span

@@ -537,7 +537,7 @@ exports.getMyTeam = async (req, res) => {
         members: members.map((m) => ({
           id: m.id,
           name: m.name,
-          email: m.email,
+          email: (isLeader || userId === m.id) ? m.email : undefined,
           leetcodeUsername: m.leetcodeUsername,
           isLeader: m.id === team.leaderId,
         })),

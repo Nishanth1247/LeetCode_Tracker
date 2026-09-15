@@ -913,6 +913,18 @@ exports.getChallengeProgress = async (req, res) => {
       Math.round((teamTotalSolved / challenge.target) * 100)
     );
 
+    const isLeader = challenge.leaderId === userId;
+    const isTargetAdmin = userRole === 'ADMIN';
+
+    // If caller is a normal member (not Admin and not Team Leader), filter membersProgress and problems to only return their own data.
+    let finalMembersProgress = membersProgress;
+    let finalProblems = teamProblems;
+
+    if (!isTargetAdmin && !isLeader) {
+      finalMembersProgress = membersProgress.filter((m) => m.userId === userId);
+      finalProblems = teamProblems.filter((p) => p.userId === userId);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -937,10 +949,10 @@ exports.getChallengeProgress = async (req, res) => {
           remaining: Math.max(0, challenge.target - teamTotalSolved),
           percentage: teamPercentage,
         },
-        difficultyBreakdown: teamDifficultyBreakdown,
+        difficultyBreakdown: (isTargetAdmin || isLeader) ? teamDifficultyBreakdown : undefined,
         status: dynamicStatus,
-        membersProgress,
-        problems: teamProblems,
+        membersProgress: finalMembersProgress,
+        problems: finalProblems,
       },
     });
   } catch (error) {

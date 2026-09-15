@@ -198,7 +198,7 @@ const TeamDetails = () => {
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="welcome-subtitle">
             Created on {new Date(team.createdAt).toLocaleDateString()}
-            {team.leaderName && ` • Leader: ⭐ ${team.leaderName}`}
+            {team.leaderName && ` • Leader: ${team.leaderName}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -369,9 +369,7 @@ const TeamDetails = () => {
                   <tbody>
                     {team.members.map((m) => (
                       <tr key={m.id}>
-                        <td className="font-semibold">
-                          {m.name} {m.isLeader && <span title="Team Leader">⭐</span>}
-                        </td>
+                        <td className="font-semibold">{m.name}</td>
                         <td>
                           {m.isLeader ? (
                             <span className="status-badge" style={{ backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#ca8a04' }}>
