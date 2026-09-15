@@ -24,6 +24,14 @@ const MemberDashboard = () => {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
 
+  // V11 Goals & Performance Summary state
+  const [goalsData, setGoalsData] = useState(null);
+  const [performanceData, setPerformanceData] = useState(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [monthlyInput, setMonthlyInput] = useState('30');
+  const [dailyInput, setDailyInput] = useState('1');
+  const [savingGoals, setSavingGoals] = useState(false);
+
   // V12 Sync Notice Modal state
   const [showSyncNoticeModal, setShowSyncNoticeModal] = useState(false);
 
