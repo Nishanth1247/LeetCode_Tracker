@@ -85,6 +85,26 @@ export const getMyAnalytics = async () => {
   return res.data;
 };
 
+export const getMyDailyAnalytics = async (date) => {
+  const res = await api.get(`/analytics/me/daily${date ? `?date=${date}` : ''}`);
+  return res.data;
+};
+
+export const getMyWeekAnalytics = async (startDate) => {
+  const res = await api.get(`/analytics/me/week${startDate ? `?startDate=${startDate}` : ''}`);
+  return res.data;
+};
+
+export const getAdminMemberDailyAnalytics = async (userId, date) => {
+  const res = await api.get(`/analytics/admin/member-daily?userId=${userId}${date ? `&date=${date}` : ''}`);
+  return res.data;
+};
+
+export const getTeamDailyAnalytics = async (teamId, date) => {
+  const res = await api.get(`/analytics/team-daily?teamId=${teamId}${date ? `&date=${date}` : ''}`);
+  return res.data;
+};
+
 export const getTeamAnalytics = async () => {
   const res = await api.get('/analytics/team');
   return res.data;
