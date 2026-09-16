@@ -401,9 +401,9 @@ const MyTeam = () => {
                         </span>
                         <h3>{challenge.title}</h3>
                       </div>
-                      {isIndividual && assignedMember && (
-                        <p className="welcome-subtitle" style={{ color: 'var(--text-secondary)' }}>
-                          Assigned to: <strong>{assignedMember.name}</strong>
+                      {isIndividual && (
+                        <p className="welcome-subtitle" style={{ color: 'var(--text-secondary)', fontWeight: 600, marginTop: '0.2rem' }}>
+                          Assigned To: <span style={{ color: 'var(--text)' }}>{assignedMember ? assignedMember.name : (challenge.assignedToName || 'Unassigned')}</span>
                         </p>
                       )}
                       {challenge.description && (
