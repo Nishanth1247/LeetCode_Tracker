@@ -119,10 +119,29 @@ exports.getAllChallenges = async (req, res) => {
         c.id, c.team_id as teamId, t.name as teamName,
         c.title, c.description, c.difficulty, c.target,
         c.start_date as startDate, c.end_date as endDate,
-        c.status, c.created_at as createdAt
+        c.status, c.created_at as createdAt,
+        c.assignment_type as assignmentType, c.assigned_to as assignedTo,
+        u.name as assignedToName, u.email as assignedToEmail,
+        creator.name as createdByName, creator.role as creatorRole
       FROM team_challenges c
       JOIN teams t ON c.team_id = t.id
+      LEFT JOIN users u ON c.assigned_to = u.id
+      LEFT JOIN users creator ON c.created_by = creator.id
       ORDER BY c.created_at DESC
+    `);
+
+    // Pre-query submissions for all active/expired challenges to compute list-level progress
+    const [allSubmissions] = await pool.query(`
+      SELECT user_id, problem_slug as slug, difficulty, solved_at as solvedAt
+      FROM leetcode_submissions
+    `);
+
+    // Fetch team members
+    const [teamMembers] = await pool.query(`
+      SELECT tm.team_id as teamId, u.id as userId
+      FROM team_members tm
+      JOIN users u ON tm.user_id = u.id
+      WHERE u.role = 'MEMBER'
     `);
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -133,9 +152,53 @@ exports.getAllChallenges = async (req, res) => {
       if (todayStr > endStr && c.status !== 'COMPLETED') {
         calcStatus = 'EXPIRED';
       }
+
+      // Progress calculation
+      let relevantUserIds = [];
+      if (c.assignmentType === 'INDIVIDUAL' && c.assignedTo) {
+        relevantUserIds = [c.assignedTo];
+      } else {
+        relevantUserIds = teamMembers.filter((tm) => tm.teamId === c.teamId).map((tm) => tm.userId);
+      }
+
+      const startMs = new Date(new Date(c.startDate).toISOString().split('T')[0] + ' 00:00:00').getTime();
+      const endMs = new Date(new Date(c.endDate).toISOString().split('T')[0] + ' 23:59:59').getTime();
+
+      let solvedCount = 0;
+      relevantUserIds.forEach((uId) => {
+        const userSubs = allSubmissions.filter((s) => {
+          if (s.user_id !== uId) return false;
+          const subMs = new Date(s.solvedAt).getTime();
+          return subMs >= startMs && subMs <= endMs;
+        });
+
+        const seenSlugs = new Set();
+        userSubs.forEach((sub) => {
+          if (!seenSlugs.has(sub.slug)) {
+            seenSlugs.add(sub.slug);
+            const diffUpper = sub.difficulty ? sub.difficulty.toUpperCase() : null;
+            let counts = false;
+            if (c.difficulty === 'MIXED') counts = true;
+            else if (c.difficulty === diffUpper) counts = true;
+
+            if (counts) solvedCount++;
+          }
+        });
+      });
+
+      if (solvedCount >= c.target && calcStatus === 'ACTIVE') {
+        calcStatus = 'COMPLETED';
+      }
+
+      const target = c.target || 1;
+      const percentage = Math.min(100, Math.round((solvedCount / target) * 100));
+
       return {
         ...c,
         status: calcStatus,
+        solved: solvedCount,
+        remaining: Math.max(0, target - solvedCount),
+        percentage,
       };
     });
 

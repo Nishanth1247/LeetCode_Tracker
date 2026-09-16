@@ -102,14 +102,34 @@ const ChallengeProgressDetails = () => {
       <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
         {/* Specs Card */}
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>Challenge Overview</h3>
+            <span
+              className="status-badge"
+              style={{
+                backgroundColor: challenge.assignmentType === 'INDIVIDUAL' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: challenge.assignmentType === 'INDIVIDUAL' ? '#9333ea' : '#2563eb',
+                fontSize: '0.75rem',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
+              {challenge.assignmentType === 'INDIVIDUAL' ? 'INDIVIDUAL TASK' : 'TEAM TASK'}
+            </span>
           </div>
           <div className="card-body">
             <div className="info-row">
               <span className="info-label">Assigned Team</span>
               <span className="info-value font-semibold">{challenge.teamName}</span>
             </div>
+            {challenge.assignmentType === 'INDIVIDUAL' && (
+              <div className="info-row">
+                <span className="info-label">Assigned Member</span>
+                <span className="info-value font-semibold" style={{ color: 'var(--primary)' }}>
+                  {membersProgress.length > 0 ? membersProgress[0].name : 'Assigned Member'}
+                </span>
+              </div>
+            )}
             <div className="info-row">
               <span className="info-label">Difficulty</span>
               <span className="info-value">
