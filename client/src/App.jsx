@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MemberDashboard from './pages/MemberDashboard';
+import MemberTasks from './pages/MemberTasks';
 import AdminDashboard from './pages/AdminDashboard';
 import Leaderboard from './pages/Leaderboard';
 import Analytics from './pages/Analytics';
@@ -57,6 +58,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <MemberDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/member/tasks"
+            element={
+              <ProtectedRoute>
+                <MemberTasks />
               </ProtectedRoute>
             }
           />

@@ -7,6 +7,8 @@ import {
   getMyGoals,
   updateMyGoals,
   getMyPerformanceSummary,
+  getMyChallenges,
+  getChallengeProgress,
 } from '../services/api';
 
 const MemberDashboard = () => {
@@ -24,7 +26,7 @@ const MemberDashboard = () => {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
 
-  // V11 Goals & Performance Summary state
+  // Goals & Performance Summary state
   const [goalsData, setGoalsData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -32,8 +34,13 @@ const MemberDashboard = () => {
   const [dailyInput, setDailyInput] = useState('1');
   const [savingGoals, setSavingGoals] = useState(false);
 
-  // V12 Sync Notice Modal state
+  // Sync Notice Modal state
   const [showSyncNoticeModal, setShowSyncNoticeModal] = useState(false);
+
+  // Today's Focus Tasks state
+  const [todaysFocusTeamTasks, setTodaysFocusTeamTasks] = useState([]);
+  const [todaysFocusIndividualTasks, setTodaysFocusIndividualTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   // Handle ESC key for Sync Notice modal
   useEffect(() => {
@@ -49,7 +56,32 @@ const MemberDashboard = () => {
   useEffect(() => {
     fetchStats();
     fetchGoalsAndPerformance();
+    fetchTodaysFocus();
   }, []);
+
+  const fetchTodaysFocus = async () => {
+    try {
+      setTasksLoading(true);
+      const res = await getMyChallenges();
+      if (res.success && res.data) {
+        const rawTeam = (res.data.teamTasks || []).filter((t) => t.status === 'ACTIVE');
+        const rawInd = (res.data.individualTasks || []).filter((t) => t.status === 'ACTIVE');
+
+        const teamPromises = rawTeam.map((t) => getChallengeProgress(t.id).catch(() => null));
+        const indPromises = rawInd.map((t) => getChallengeProgress(t.id).catch(() => null));
+
+        const teamResults = await Promise.all(teamPromises);
+        const indResults = await Promise.all(indPromises);
+
+        setTodaysFocusTeamTasks(teamResults.filter((r) => r && r.success).map((r) => r.data));
+        setTodaysFocusIndividualTasks(indResults.filter((r) => r && r.success).map((r) => r.data));
+      }
+    } catch (err) {
+      console.error('Error loading today focus tasks:', err);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
 
   const fetchGoalsAndPerformance = async () => {
     try {
@@ -113,38 +145,6 @@ const MemberDashboard = () => {
       setError('Failed to load LeetCode data. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPrivacy = async () => {
-    try {
-      const res = await getLeaderboardPrivacy();
-      if (res.success) {
-        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
-      }
-    } catch (err) {
-      console.error('Error fetching leaderboard privacy:', err);
-    }
-  };
-
-  const handlePrivacySubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setPrivacyLoading(true);
-      setPrivacySuccessMsg('');
-      const res = await updateLeaderboardPrivacy(leaderboardOptIn);
-      if (res.success) {
-        setLeaderboardOptIn(Boolean(res.data.leaderboardOptIn));
-        setPrivacySuccessMsg(
-          leaderboardOptIn
-            ? 'Leaderboard visibility enabled! You will appear on the team leaderboard.'
-            : 'Leaderboard visibility disabled. You will not appear on the member leaderboard.'
-        );
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update privacy setting.');
-    } finally {
-      setPrivacyLoading(false);
     }
   };
 
@@ -232,7 +232,7 @@ const MemberDashboard = () => {
         <p className="welcome-subtitle">Welcome back, <strong>{user?.name}</strong>!</p>
       </div>
 
-      {/* V12 Automatic Sync Notice Banner */}
+      {/* Automatic Sync Notice Banner */}
       <div className="card" style={{ marginBottom: '1.25rem', padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>LeetCode Sync Updates</span>
@@ -250,13 +250,13 @@ const MemberDashboard = () => {
 
       {error && (
         <div className="alert alert-error">
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
         </div>
       )}
 
       {successMsg && (
         <div className="alert alert-success">
-          <span>✓ {successMsg}</span>
+          <span>{successMsg}</span>
         </div>
       )}
 
@@ -266,229 +266,413 @@ const MemberDashboard = () => {
           <p>Loading LeetCode profile...</p>
         </div>
       ) : (
-        <div className="dashboard-grid">
-          {/* User Profile Overview */}
-          <div className="card profile-card">
-            <div className="card-header">
-              <h3>Profile Overview</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* ============================================================
+              SECTION 1: TODAY'S FOCUS (PROMINENT AT TOP)
+             ============================================================ */}
+          <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
+            <div className="card-header" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                Today's Focus
+              </h2>
+              <p className="welcome-subtitle" style={{ marginTop: '0.2rem' }}>
+                Your active target tasks for today
+              </p>
             </div>
             <div className="card-body">
-              <div className="info-row">
-                <span className="info-label">Name</span>
-                <span className="info-value">{user?.name}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">Email</span>
-                <span className="info-value">{user?.email}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">LeetCode Status</span>
-                <span className="info-value">
-                  {statsData?.username ? (
-                    <span className="role-badge badge-member">Connected</span>
-                  ) : (
-                    <span className="role-badge badge-admin">Not Connected</span>
-                  )}
-                </span>
-              </div>
+              {tasksLoading ? (
+                <p className="not-connected-tag">Loading your active tasks...</p>
+              ) : todaysFocusIndividualTasks.length === 0 && todaysFocusTeamTasks.length === 0 ? (
+                <div className="empty-state" style={{ padding: '1.5rem' }}>
+                  <p className="welcome-subtitle">No active tasks for today.</p>
+                  <span className="card-description">
+                    When your Team Leader or Admin assigns tasks, they will appear here.
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  {/* My Individual Tasks */}
+                  {todaysFocusIndividualTasks.map(({ challenge, progress }) => {
+                    const solved = progress.solved || 0;
+                    const target = challenge.target || 1;
+                    const remaining = Math.max(0, target - solved);
+                    const pct = Math.min(100, Math.round((solved / target) * 100));
+
+                    return (
+                      <div
+                        key={challenge.id}
+                        style={{
+                          backgroundColor: 'var(--surface-hover)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                          <span className="status-badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#9333ea', fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                            MY INDIVIDUAL TASK
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                            Due: {new Date(challenge.endDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem' }}>{challenge.title}</h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                          <span>Target: <strong style={{ color: 'var(--text)' }}>{target}</strong></span>
+                          <span>Solved: <strong style={{ color: 'var(--status-easy)' }}>{solved}</strong></span>
+                          <span>Remaining: <strong style={{ color: 'var(--text)' }}>{remaining}</strong></span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', backgroundColor: 'var(--primary)' }}></div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginTop: '0.3rem' }}>
+                          <span>Progress</span>
+                          <span>{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Team Task (Own Contribution Only) */}
+                  {todaysFocusTeamTasks.map(({ challenge, membersProgress }) => {
+                    const myProg = membersProgress && membersProgress.length > 0 ? membersProgress[0] : null;
+                    const mySolved = myProg ? myProg.solved : 0;
+                    const myPct = myProg ? myProg.percentage : Math.min(100, Math.round((mySolved / challenge.target) * 100));
+
+                    return (
+                      <div
+                        key={challenge.id}
+                        style={{
+                          backgroundColor: 'var(--surface-hover)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                          <span className="status-badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#2563eb', fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                            TEAM TASK
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                            Due: {new Date(challenge.endDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.1rem' }}>{challenge.title}</h4>
+                        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                          Team: {challenge.teamName} (Target: {challenge.target})
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                          <span>My Contribution: <strong style={{ color: 'var(--text)' }}>{mySolved}</strong></span>
+                          <span>My Progress: <strong style={{ color: 'var(--primary)' }}>{myPct}%</strong></span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${myPct}%`, height: '100%', backgroundColor: 'var(--primary)' }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* LeetCode Connection / Stats Section */}
-          {!statsData?.username ? (
-            <div className="card connect-card">
+          {/* ============================================================
+              SECTION 2: USER PROFILE & LEETCODE PROFILE
+             ============================================================ */}
+          <div className="dashboard-grid">
+            {/* User Profile Overview */}
+            <div className="card profile-card">
               <div className="card-header">
-                <h3>Connect Your LeetCode Account</h3>
+                <h3>Profile Overview</h3>
               </div>
               <div className="card-body">
-                <p className="card-description">
-                  Enter your public LeetCode username below to connect your profile and track your solved problem statistics.
-                </p>
-                <form onSubmit={handleConnect} className="connect-form">
-                  <div className="form-group">
-                    <label htmlFor="leetcodeUsername">LeetCode Username</label>
-                    <input
-                      id="leetcodeUsername"
-                      type="text"
-                      placeholder="e.g. arun123"
-                      value={usernameInput}
-                      onChange={(e) => setUsernameInput(e.target.value)}
-                      disabled={actionLoading}
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Connecting to LeetCode...' : 'Connect LeetCode'}
-                  </button>
-                </form>
+                <div className="info-row">
+                  <span className="info-label">Name</span>
+                  <span className="info-value">{user?.name}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Email</span>
+                  <span className="info-value">{user?.email}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">LeetCode Status</span>
+                  <span className="info-value">
+                    {statsData?.username ? (
+                      <span className="role-badge badge-member">Connected</span>
+                    ) : (
+                      <span className="role-badge badge-admin">Not Connected</span>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="card stats-card">
-              <div className="card-header dashboard-header-flex">
-                <h3>LeetCode Progress</h3>
-                <span className="username-tag">@{statsData.username}</span>
+
+            {/* LeetCode Connection / Stats Section */}
+            {!statsData?.username ? (
+              <div className="card connect-card">
+                <div className="card-header">
+                  <h3>Connect Your LeetCode Account</h3>
+                </div>
+                <div className="card-body">
+                  <p className="card-description">
+                    Enter your public LeetCode username below to connect your profile and track your solved problem statistics.
+                  </p>
+                  <form onSubmit={handleConnect} className="connect-form">
+                    <div className="form-group">
+                      <label htmlFor="leetcodeUsername">LeetCode Username</label>
+                      <input
+                        id="leetcodeUsername"
+                        type="text"
+                        placeholder="e.g. arun123"
+                        value={usernameInput}
+                        onChange={(e) => setUsernameInput(e.target.value)}
+                        disabled={actionLoading}
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Connecting to LeetCode...' : 'Connect LeetCode'}
+                    </button>
+                  </form>
+                </div>
               </div>
-              <div className="stats-grid">
-                <div className="stat-box total">
-                  <span className="stat-title">Total Solved</span>
-                  <span className="stat-number highlight-total">{statsData.totalSolved}</span>
+            ) : (
+              <div className="card stats-card">
+                <div className="card-header dashboard-header-flex">
+                  <h3>LeetCode Progress</h3>
+                  <span className="username-tag">@{statsData.username}</span>
                 </div>
-                <div className="stat-box easy">
-                  <span className="stat-title">Easy</span>
-                  <span className="stat-number text-easy">{statsData.easySolved}</span>
+                <div className="stats-grid">
+                  <div className="stat-box total">
+                    <span className="stat-title">Total Solved</span>
+                    <span className="stat-number highlight-total">{statsData.totalSolved}</span>
+                  </div>
+                  <div className="stat-box easy">
+                    <span className="stat-title">Easy</span>
+                    <span className="stat-number text-easy">{statsData.easySolved}</span>
+                  </div>
+                  <div className="stat-box medium">
+                    <span className="stat-title">Medium</span>
+                    <span className="stat-number text-medium">{statsData.mediumSolved}</span>
+                  </div>
+                  <div className="stat-box hard">
+                    <span className="stat-title">Hard</span>
+                    <span className="stat-number text-hard">{statsData.hardSolved}</span>
+                  </div>
                 </div>
-                <div className="stat-box medium">
-                  <span className="stat-title">Medium</span>
-                  <span className="stat-number text-medium">{statsData.mediumSolved}</span>
+
+                <div className="card-footer sync-footer">
+                  <div className="sync-info">
+                    <span className="info-label">Last Synced:</span>
+                    <span className="sync-time">{formatDate(statsData.lastSynced)}</span>
+                  </div>
                 </div>
-                <div className="stat-box hard">
-                  <span className="stat-title">Hard</span>
-                  <span className="stat-number text-hard">{statsData.hardSolved}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ============================================================
+              SECTION 3: GOALS & PERFORMANCE SUMMARY
+             ============================================================ */}
+          {statsData?.username && (
+            <div className="dashboard-grid">
+              {/* 1. My Personal Goals Card */}
+              <div className="card">
+                <div className="card-header dashboard-header-flex">
+                  <h3>My Personal Goals</h3>
+                  <button
+                    onClick={() => setShowGoalModal(true)}
+                    className="btn btn-secondary"
+                    style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
+                  >
+                    {goalsData?.hasGoal ? 'Edit Goals' : 'Set Your Goals'}
+                  </button>
+                </div>
+                <div className="card-body">
+                  {!goalsData?.hasGoal ? (
+                    <div className="empty-state" style={{ padding: '1rem' }}>
+                      <p style={{ marginBottom: '0.5rem', fontWeight: 600 }}>No goals configured yet.</p>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: '0.75rem' }}>
+                        Set your monthly and daily target problems to track your progress.
+                      </p>
+                      <button
+                        onClick={() => setShowGoalModal(true)}
+                        className="btn btn-primary"
+                        style={{ width: 'auto', fontSize: '0.85rem' }}
+                      >
+                        Set Your Goals Now
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      {/* Monthly Goal Progress */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Monthly Goal</span>
+                          <span className="status-badge" style={{
+                            backgroundColor: goalsData.monthlyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : goalsData.monthlyStatus === 'ON TRACK' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                            color: goalsData.monthlyStatus === 'COMPLETED' ? 'var(--status-easy)' : goalsData.monthlyStatus === 'ON TRACK' ? 'var(--primary)' : 'var(--status-hard)'
+                          }}>
+                            {goalsData.monthlyStatus}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
+                          <span>Progress: <strong>{goalsData.monthlySolved} / {goalsData.monthlyGoal}</strong> solved</span>
+                          <span><strong>{goalsData.monthlyPercentage}%</strong></span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${goalsData.monthlyPercentage}%`, height: '100%', backgroundColor: goalsData.monthlyPercentage === 100 ? 'var(--status-easy)' : 'var(--primary)' }}></div>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
+                          {goalsData.monthlyRemaining === 0 ? 'Monthly goal completed!' : `${goalsData.monthlyRemaining} problems remaining this month`}
+                        </span>
+                      </div>
+
+                      {/* Daily Goal Progress */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Daily Target (Today)</span>
+                          <span className="status-badge" style={{
+                            backgroundColor: goalsData.dailyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                            color: goalsData.dailyStatus === 'COMPLETED' ? 'var(--status-easy)' : 'var(--status-medium)'
+                          }}>
+                            {goalsData.dailyStatus}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
+                          <span>Today: <strong>{goalsData.dailySolved} / {goalsData.dailyGoal}</strong> solved</span>
+                          <span><strong>{goalsData.dailyPercentage}%</strong></span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${goalsData.dailyPercentage}%`, height: '100%', backgroundColor: goalsData.dailyPercentage === 100 ? 'var(--status-easy)' : 'var(--status-medium)' }}></div>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
+                          {goalsData.dailyRemaining === 0 ? 'Goal completed today!' : `${goalsData.dailyRemaining} more problem required today`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="card-footer sync-footer">
-                <div className="sync-info">
-                  <span className="info-label">Last Synced:</span>
-                  <span className="sync-time">{formatDate(statsData.lastSynced)}</span>
+              {/* 2. Performance Summary Card */}
+              <div className="card">
+                <div className="card-header">
+                  <h3>Performance Summary</h3>
+                </div>
+                <div className="card-body">
+                  {!performanceData ? (
+                    <div className="empty-state" style={{ padding: '1rem' }}>
+                      <p>Loading performance summary...</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                      <div className="stat-box">
+                        <span className="stat-title">Total Solved</span>
+                        <span className="stat-number highlight-total">{performanceData.totalSolved}</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">This Month</span>
+                        <span className="stat-number text-easy">{performanceData.solvedThisMonth}</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">This Week (7 Days)</span>
+                        <span className="stat-number text-medium">{performanceData.solvedThisWeek}</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">Current Streak</span>
+                        <span className="stat-number text-easy">{performanceData.currentStreak} days</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">Longest Streak</span>
+                        <span className="stat-number text-easy">{performanceData.longestStreak} days</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">Inactive (This Week)</span>
+                        <span className="stat-number text-hard">{performanceData.inactiveDays ?? 0} {performanceData.inactiveDays === 1 ? 'day' : 'days'}</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-title">Active Days (Month)</span>
+                        <span className="stat-number highlight-total">{performanceData.activeDaysThisMonth} days</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* V11 MY PERSONAL GOALS & PERFORMANCE SUMMARY SECTIONS */}
-      {statsData?.username && (
-        <div className="dashboard-grid" style={{ marginTop: '1.5rem' }}>
-          {/* 1. My Personal Goals Card */}
-          <div className="card">
-            <div className="card-header dashboard-header-flex">
-              <h3>My Personal Goals</h3>
-              <button
-                onClick={() => setShowGoalModal(true)}
-                className="btn btn-secondary"
-                style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}
-              >
-                {goalsData?.hasGoal ? 'Edit Goals' : 'Set Your Goals'}
-              </button>
-            </div>
-            <div className="card-body">
-              {!goalsData?.hasGoal ? (
-                <div className="empty-state" style={{ padding: '1rem' }}>
-                  <p style={{ marginBottom: '0.5rem', fontWeight: 600 }}>No goals configured yet.</p>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: '0.75rem' }}>
-                    Set your monthly and daily target problems to track your progress.
-                  </p>
-                  <button
-                    onClick={() => setShowGoalModal(true)}
-                    className="btn btn-primary"
-                    style={{ width: 'auto', fontSize: '0.85rem' }}
-                  >
-                    Set Your Goals Now
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {/* Monthly Goal Progress */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Monthly Goal</span>
-                      <span className="status-badge" style={{
-                        backgroundColor: goalsData.monthlyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : goalsData.monthlyStatus === 'ON TRACK' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                        color: goalsData.monthlyStatus === 'COMPLETED' ? 'var(--status-easy)' : goalsData.monthlyStatus === 'ON TRACK' ? 'var(--primary)' : 'var(--status-hard)'
-                      }}>
-                        {goalsData.monthlyStatus}
+          {/* ============================================================
+              SECTION 4: RECENT ACTIVITY
+             ============================================================ */}
+          {statsData?.username && (
+            <div className="card activity-section-card">
+              <div className="card-header dashboard-header-flex">
+                <h3>Recent LeetCode Activity</h3>
+                {activityData && getStatusBadge(activityData.status)}
+              </div>
+              <div className="card-body">
+                {activityError && (
+                  <div className="alert alert-error">
+                    <span>{activityError}</span>
+                  </div>
+                )}
+
+                {activityLoading ? (
+                  <div className="loading-container" style={{ minHeight: '120px' }}>
+                    <div className="spinner"></div>
+                    <p>Loading activity...</p>
+                  </div>
+                ) : activityData?.submissions && activityData.submissions.length > 0 ? (
+                  <div className="activity-container">
+                    <div className="info-row" style={{ marginBottom: '1rem' }}>
+                      <span className="info-label">Last Activity Date</span>
+                      <span className="info-value">
+                        {formatActivityDate(activityData.lastActivity)}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
-                      <span>Progress: <strong>{goalsData.monthlySolved} / {goalsData.monthlyGoal}</strong> solved</span>
-                      <span><strong>{goalsData.monthlyPercentage}%</strong></span>
-                    </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${goalsData.monthlyPercentage}%`, height: '100%', backgroundColor: goalsData.monthlyPercentage === 100 ? 'var(--status-easy)' : 'var(--primary)' }}></div>
-                    </div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
-                      {goalsData.monthlyRemaining === 0 ? 'Monthly goal completed!' : `${goalsData.monthlyRemaining} problems remaining this month`}
-                    </span>
+                    <h4 className="activity-list-title">Recent Accepted Problems</h4>
+                    <ul className="activity-list">
+                      {activityData.submissions.slice(0, 5).map((sub, index) => (
+                        <li key={index} className="activity-item">
+                          <div className="activity-item-main">
+                            <span className="activity-index">{index + 1}.</span>
+                            {sub.slug ? (
+                              <a
+                                href={`https://leetcode.com/problems/${sub.slug}/`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="activity-title-link"
+                              >
+                                {sub.title}
+                              </a>
+                            ) : (
+                              <span className="activity-title">{sub.title}</span>
+                            )}
+                          </div>
+                          <div className="activity-item-meta">
+                            {sub.language && <span className="language-tag">{sub.language}</span>}
+                            <span className="activity-date">
+                              {formatActivityDate(sub.timestamp)}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-
-                  {/* Daily Goal Progress */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Daily Target (Today)</span>
-                      <span className="status-badge" style={{
-                        backgroundColor: goalsData.dailyStatus === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                        color: goalsData.dailyStatus === 'COMPLETED' ? 'var(--status-easy)' : 'var(--status-medium)'
-                      }}>
-                        {goalsData.dailyStatus}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
-                      <span>Today: <strong>{goalsData.dailySolved} / {goalsData.dailyGoal}</strong> solved</span>
-                      <span><strong>{goalsData.dailyPercentage}%</strong></span>
-                    </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${goalsData.dailyPercentage}%`, height: '100%', backgroundColor: goalsData.dailyPercentage === 100 ? 'var(--status-easy)' : 'var(--status-medium)' }}></div>
-                    </div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '0.25rem', display: 'block' }}>
-                      {goalsData.dailyRemaining === 0 ? 'Goal completed today!' : `${goalsData.dailyRemaining} more problem required today`}
-                    </span>
+                ) : (
+                  <div className="empty-state" style={{ padding: '1.5rem' }}>
+                    <p>No recent accepted submissions found.</p>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* 2. Performance Summary Card */}
-          <div className="card">
-            <div className="card-header">
-              <h3>Performance Summary</h3>
-            </div>
-            <div className="card-body">
-              {!performanceData ? (
-                <div className="empty-state" style={{ padding: '1rem' }}>
-                  <p>Loading performance summary...</p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                  <div className="stat-box">
-                    <span className="stat-title">Total Solved</span>
-                    <span className="stat-number highlight-total">{performanceData.totalSolved}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">This Month</span>
-                    <span className="stat-number text-easy">{performanceData.solvedThisMonth}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">This Week (7 Days)</span>
-                    <span className="stat-number text-medium">{performanceData.solvedThisWeek}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">Current Streak</span>
-                    <span className="stat-number text-easy">🔥 {performanceData.currentStreak} d</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">Longest Streak</span>
-                    <span className="stat-number text-easy">{performanceData.longestStreak} days</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">Inactive (This Week)</span>
-                    <span className="stat-number text-hard">{performanceData.inactiveDays ?? 0} {performanceData.inactiveDays === 1 ? 'day' : 'days'}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-title">Active Days (Month)</span>
-                    <span className="stat-number highlight-total">{performanceData.activeDaysThisMonth} days</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -570,74 +754,7 @@ const MemberDashboard = () => {
         </div>
       )}
 
-      {/* V4 RECENT LEETCODE ACTIVITY SECTION */}
-
-      {/* V4 RECENT LEETCODE ACTIVITY SECTION */}
-      {statsData?.username && (
-        <div className="card activity-section-card" style={{ marginTop: '1.5rem' }}>
-          <div className="card-header dashboard-header-flex">
-            <h3>Recent LeetCode Activity</h3>
-            {activityData && getStatusBadge(activityData.status)}
-          </div>
-          <div className="card-body">
-            {activityError && (
-              <div className="alert alert-error">
-                <span>⚠️ {activityError}</span>
-              </div>
-            )}
-
-            {activityLoading ? (
-              <div className="loading-container" style={{ minHeight: '120px' }}>
-                <div className="spinner"></div>
-                <p>Loading activity...</p>
-              </div>
-            ) : activityData?.submissions && activityData.submissions.length > 0 ? (
-              <div className="activity-container">
-                <div className="info-row" style={{ marginBottom: '1rem' }}>
-                  <span className="info-label">Last Activity Date</span>
-                  <span className="info-value">
-                    {formatActivityDate(activityData.lastActivity)}
-                  </span>
-                </div>
-                <h4 className="activity-list-title">Recent Accepted Problems</h4>
-                <ul className="activity-list">
-                  {activityData.submissions.slice(0, 5).map((sub, index) => (
-                    <li key={index} className="activity-item">
-                      <div className="activity-item-main">
-                        <span className="activity-index">{index + 1}.</span>
-                        {sub.slug ? (
-                          <a
-                            href={`https://leetcode.com/problems/${sub.slug}/`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="activity-title-link"
-                          >
-                            {sub.title}
-                          </a>
-                        ) : (
-                          <span className="activity-title">{sub.title}</span>
-                        )}
-                      </div>
-                      <div className="activity-item-meta">
-                        {sub.language && <span className="language-tag">{sub.language}</span>}
-                        <span className="activity-date">
-                          {formatActivityDate(sub.timestamp)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="empty-state" style={{ padding: '1.5rem' }}>
-                <p>No recent accepted submissions found.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* V12 Sync Notice Modal */}
+      {/* Sync Notice Modal */}
       {showSyncNoticeModal && (
         <div
           className="modal-backdrop"

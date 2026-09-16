@@ -121,6 +121,13 @@ const Navbar = () => {
                     Dashboard
                   </Link>
                   <Link
+                    to="/member/tasks"
+                    className={`nav-item ${location.pathname === '/member/tasks' ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    My Tasks
+                  </Link>
+                  <Link
                     to="/my-team"
                     className={`nav-item ${location.pathname === '/my-team' ? 'active' : ''}`}
                     onClick={closeMenu}
