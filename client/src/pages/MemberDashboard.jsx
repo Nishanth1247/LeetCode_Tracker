@@ -40,6 +40,7 @@ const MemberDashboard = () => {
   // Today's Focus Tasks state
   const [todaysFocusTeamTasks, setTodaysFocusTeamTasks] = useState([]);
   const [todaysFocusIndividualTasks, setTodaysFocusIndividualTasks] = useState([]);
+  const [isLeaderUser, setIsLeaderUser] = useState(false);
   const [tasksLoading, setTasksLoading] = useState(false);
 
   // Handle ESC key for Sync Notice modal
@@ -64,6 +65,7 @@ const MemberDashboard = () => {
       setTasksLoading(true);
       const res = await getMyChallenges();
       if (res.success && res.data) {
+        setIsLeaderUser(Boolean(res.data.isLeader));
         const rawTeam = (res.data.teamTasks || []).filter((t) => t.status === 'ACTIVE');
         const rawInd = (res.data.individualTasks || []).filter((t) => t.status === 'ACTIVE');
 
@@ -292,12 +294,19 @@ const MemberDashboard = () => {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-                  {/* My Individual Tasks */}
-                  {todaysFocusIndividualTasks.map(({ challenge, progress }) => {
+                  {/* Individual Tasks */}
+                  {todaysFocusIndividualTasks.map(({ challenge, progress, membersProgress }) => {
                     const solved = progress.solved || 0;
                     const target = challenge.target || 1;
                     const remaining = Math.max(0, target - solved);
                     const pct = Math.min(100, Math.round((solved / target) * 100));
+
+                    const assignedName = challenge.assignedToName || (membersProgress && membersProgress[0] ? membersProgress[0].name : null);
+                    const isSelfAssigned = challenge.assignedTo === user?.id;
+
+                    const badgeLabel = isLeaderUser
+                      ? (assignedName && !isSelfAssigned ? `${assignedName.toUpperCase()}'S TASK` : "ASSIGNED MEMBER'S TASK")
+                      : "MY INDIVIDUAL TASK";
 
                     return (
                       <div
@@ -311,13 +320,18 @@ const MemberDashboard = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                           <span className="status-badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#9333ea', fontSize: '0.7rem', textTransform: 'uppercase' }}>
-                            MY INDIVIDUAL TASK
+                            {badgeLabel}
                           </span>
                           <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
                             Due: {new Date(challenge.endDate).toLocaleDateString()}
                           </span>
                         </div>
-                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem' }}>{challenge.title}</h4>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.2rem' }}>{challenge.title}</h4>
+                        {isLeaderUser && assignedName && (
+                          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '0.35rem' }}>
+                            Assigned To: <span style={{ color: 'var(--text)' }}>{assignedName}</span>
+                          </p>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
                           <span>Target: <strong style={{ color: 'var(--text)' }}>{target}</strong></span>
                           <span>Solved: <strong style={{ color: 'var(--status-easy)' }}>{solved}</strong></span>

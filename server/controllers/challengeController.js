@@ -730,19 +730,21 @@ exports.getMyChallenges = async (req, res) => {
     const isLeader = assignments[0].leader_id === userId;
 
     let querySQL = `
-      SELECT id, title, description, difficulty, target, start_date as startDate, end_date as endDate, status,
-             assignment_type as assignmentType, assigned_to as assignedTo, created_by as createdBy
-      FROM team_challenges
-      WHERE team_id = ?
+      SELECT c.id, c.title, c.description, c.difficulty, c.target, c.start_date as startDate, c.end_date as endDate, c.status,
+             c.assignment_type as assignmentType, c.assigned_to as assignedTo, c.created_by as createdBy,
+             au.name as assignedToName
+      FROM team_challenges c
+      LEFT JOIN users au ON c.assigned_to = au.id
+      WHERE c.team_id = ?
     `;
     let queryParams = [teamId];
 
     if (!isLeader) {
-      querySQL += ` AND (assignment_type = 'TEAM' OR assigned_to = ?)`;
+      querySQL += ` AND (c.assignment_type = 'TEAM' OR c.assigned_to = ?)`;
       queryParams.push(userId);
     }
 
-    querySQL += ` ORDER BY start_date DESC`;
+    querySQL += ` ORDER BY c.start_date DESC`;
 
     const [challenges] = await pool.query(querySQL, queryParams);
 

@@ -9,6 +9,7 @@ const MemberTasks = () => {
   const [error, setError] = useState(null);
   const [teamTasks, setTeamTasks] = useState([]);
   const [individualTasks, setIndividualTasks] = useState([]);
+  const [isLeaderUser, setIsLeaderUser] = useState(false);
   const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'COMPLETED' | 'EXPIRED'
 
   const fetchTasks = async () => {
@@ -17,6 +18,7 @@ const MemberTasks = () => {
       setError(null);
       const res = await getMyChallenges();
       if (res.success && res.data) {
+        setIsLeaderUser(Boolean(res.data.isLeader));
         const rawTeam = res.data.teamTasks || [];
         const rawInd = res.data.individualTasks || [];
 
@@ -172,36 +174,55 @@ const MemberTasks = () => {
           )}
         </div>
 
-        {/* MY INDIVIDUAL TASKS SECTION */}
+        {/* INDIVIDUAL TASKS SECTION */}
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text)' }}>
-            My Individual Tasks ({filteredInd.length})
+            {isLeaderUser ? 'Tasks Given By Me' : 'My Individual Tasks'} ({filteredInd.length})
           </h2>
 
           {filteredInd.length === 0 ? (
             <div className="card empty-state" style={{ padding: '2rem 1rem' }}>
-              <p className="welcome-subtitle">No individual tasks assigned yet.</p>
-              <span className="card-description">Your Team Leader can assign tasks to you.</span>
+              <p className="welcome-subtitle">
+                {isLeaderUser ? 'No tasks given to team members yet.' : 'No individual tasks assigned yet.'}
+              </p>
+              <span className="card-description">
+                {isLeaderUser ? 'You can assign individual tasks from the My Team page.' : 'Your Team Leader can assign tasks to you.'}
+              </span>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
-              {filteredInd.map(({ challenge, progress, status }) => {
+              {filteredInd.map(({ challenge, progress, status, membersProgress }) => {
                 const solved = progress.solved || 0;
                 const target = challenge.target || 1;
                 const remaining = Math.max(0, target - solved);
                 const pct = Math.min(100, Math.round((solved / target) * 100));
+
+                const assignedName = challenge.assignedToName || (membersProgress && membersProgress[0] ? membersProgress[0].name : null);
+                const isSelfAssigned = challenge.assignedTo === user?.id;
+
+                const badgeLabel = isLeaderUser
+                  ? (assignedName && !isSelfAssigned ? `${assignedName.toUpperCase()}'S TASK` : "ASSIGNED MEMBER'S TASK")
+                  : "MY INDIVIDUAL TASK";
 
                 return (
                   <div key={challenge.id} className="card">
                     <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <span className="status-badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#9333ea', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.3rem', display: 'inline-block' }}>
-                          MY INDIVIDUAL TASK
+                          {badgeLabel}
                         </span>
                         <h3>{challenge.title}</h3>
-                        <p className="welcome-subtitle" style={{ color: 'var(--text-secondary)' }}>
-                          Assigned by: <strong>Team Leader</strong>
-                        </p>
+                        {isLeaderUser ? (
+                          assignedName && (
+                            <p className="welcome-subtitle" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                              Assigned To: <span style={{ color: 'var(--text)' }}>{assignedName}</span>
+                            </p>
+                          )
+                        ) : (
+                          <p className="welcome-subtitle" style={{ color: 'var(--text-secondary)' }}>
+                            Assigned by: <strong>Team Leader</strong>
+                          </p>
+                        )}
                       </div>
                       <span
                         className="status-badge"
