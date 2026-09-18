@@ -287,4 +287,10 @@ export const getAdminMemberLanguageAnalytics = async (userId) => {
   return res.data;
 };
 
+// Practice Suggestions helper (V13.3)
+export const getPracticeSuggestions = async () => {
+  const res = await api.get('/recommendations/me');
+  return res.data;
+};
+
 export default api;

@@ -9,6 +9,7 @@ import {
   getMyPerformanceSummary,
   getMyChallenges,
   getChallengeProgress,
+  getPracticeSuggestions,
 } from '../services/api';
 
 const MemberDashboard = () => {
@@ -25,6 +26,12 @@ const MemberDashboard = () => {
   const [activityData, setActivityData] = useState(null);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState('');
+
+  // Practice Suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsReason, setSuggestionsReason] = useState(null);
+  const [suggestionsError, setSuggestionsError] = useState('');
 
   // Goals & Performance Summary state
   const [goalsData, setGoalsData] = useState(null);
@@ -58,7 +65,25 @@ const MemberDashboard = () => {
     fetchStats();
     fetchGoalsAndPerformance();
     fetchTodaysFocus();
+    fetchSuggestions();
   }, []);
+
+  const fetchSuggestions = async () => {
+    try {
+      setSuggestionsLoading(true);
+      setSuggestionsError('');
+      const res = await getPracticeSuggestions();
+      if (res.success && res.data) {
+        setSuggestions(res.data.suggestions || []);
+        setSuggestionsReason(res.data.reason || null);
+      }
+    } catch (err) {
+      console.error('Failed to load practice suggestions:', err);
+      setSuggestionsError('Unable to load practice suggestions.');
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
 
   const fetchTodaysFocus = async () => {
     try {
@@ -386,6 +411,113 @@ const MemberDashboard = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ============================================================
+              PRACTICE SUGGESTIONS (FOR MEMBERS)
+             ============================================================ */}
+          <div className="card">
+            <div className="card-header" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                Practice Suggestions
+              </h2>
+              <p className="welcome-subtitle" style={{ marginTop: '0.2rem' }}>
+                Problems similar to what you've recently solved.
+              </p>
+            </div>
+            <div className="card-body">
+              {suggestionsLoading ? (
+                <p className="not-connected-tag">Finding problems to practice...</p>
+              ) : suggestionsError ? (
+                <div className="alert alert-error" style={{ margin: 0 }}>
+                  <span>{suggestionsError}</span>
+                </div>
+              ) : suggestionsReason === 'NO_SOLVED_HISTORY' ? (
+                <div className="empty-state" style={{ padding: '1.5rem' }}>
+                  <p className="welcome-subtitle" style={{ fontWeight: 600 }}>Solve a few LeetCode problems first.</p>
+                  <span className="card-description">
+                    We'll use your solved problems to suggest what to practice next.
+                  </span>
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="empty-state" style={{ padding: '1.5rem' }}>
+                  <p className="welcome-subtitle" style={{ fontWeight: 600 }}>No new similar problems found yet.</p>
+                  <span className="card-description">
+                    Keep solving problems and we'll suggest more.
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                  {suggestions.map((item) => (
+                    <div
+                      key={item.slug}
+                      style={{
+                        backgroundColor: 'var(--surface-hover)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justify: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>{item.title}</h4>
+                          <span
+                            className="status-badge"
+                            style={{
+                              backgroundColor:
+                                item.difficulty === 'EASY'
+                                  ? 'rgba(16, 185, 129, 0.15)'
+                                  : item.difficulty === 'MEDIUM'
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(239, 68, 68, 0.15)',
+                              color:
+                                item.difficulty === 'EASY'
+                                  ? 'var(--status-easy)'
+                                  : item.difficulty === 'MEDIUM'
+                                  ? 'var(--status-medium)'
+                                  : 'var(--status-hard)',
+                              fontSize: '0.7rem',
+                            }}
+                          >
+                            {item.difficulty}
+                          </span>
+                        </div>
+
+                        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: '0.4rem' }}>
+                          {item.tags.join(' • ')}
+                        </p>
+
+                        {item.similarTo && (
+                          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '0.85rem' }}>
+                            Similar to: <strong>{item.similarTo.title}</strong>
+                          </p>
+                        )}
+                      </div>
+
+                      <a
+                        href={item.leetcodeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{
+                          textDecoration: 'none',
+                          textAlign: 'center',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.85rem',
+                          display: 'block',
+                          width: '100%',
+                        }}
+                      >
+                        Practice Problem
+                      </a>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
