@@ -22,9 +22,11 @@ exports.getAdminDashboard = async (req, res) => {
         c.id, c.team_id as teamId, t.name as teamName,
         c.title, c.description, c.difficulty, c.target,
         c.start_date as startDate, c.end_date as endDate,
-        c.status, c.created_at as createdAt
+        c.status, c.created_at as createdAt,
+        c.assignment_type as assignmentType
       FROM team_challenges c
       JOIN teams t ON c.team_id = t.id
+      WHERE c.assignment_type = 'TEAM' OR c.assignment_type IS NULL
       ORDER BY c.created_at DESC
     `);
 

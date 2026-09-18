@@ -100,6 +100,45 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div className="card-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div className="card-body">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <Link to="/admin/users" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Manage Users</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/admin/teams" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Teams</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/admin/challenges" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Challenges</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/leaderboard" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Leaderboard</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/admin/streaks" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Streaks</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/analytics" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Analytics</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+            <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
+              <span>Solved Problems</span>
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Section A — KPI Cards */}
       <div className="stats-grid" style={{ padding: 0, marginBottom: '1.5rem' }}>
         <div className="stat-box">
@@ -357,120 +396,78 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Grid Row: Recent Activity & Quick Actions */}
-      <div className="dashboard-grid">
-        {/* 6. Section F — Recent Activity */}
-        <div className="card">
-          <div className="card-header dashboard-header-flex">
-            <h3>Recent LeetCode Submissions</h3>
-            <Link to="/admin/solved-problems" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
-              Full History →
-            </Link>
-          </div>
-          <div className="card-body" style={{ padding: 0 }}>
-            {!recentActivity || recentActivity.length === 0 ? (
-              <div className="empty-state" style={{ padding: '1.5rem' }}>
-                <p>No recent LeetCode activity recorded.</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Member</th>
-                      <th>Problem Title</th>
-                      <th>Difficulty</th>
-                      <th>Language</th>
-                      <th>Solved Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentActivity.map((sub) => (
-                      <tr key={sub.id}>
-                        <td className="font-semibold">{sub.memberName}</td>
-                        <td>
-                          {sub.slug ? (
-                            <a
-                              href={`https://leetcode.com/problems/${sub.slug}/`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}
-                            >
-                              {sub.title}
-                            </a>
-                          ) : (
-                            <span>{sub.title}</span>
-                          )}
-                        </td>
-                        <td>
-                          <span
-                            className="status-badge"
-                            style={{
-                              backgroundColor:
-                                sub.difficulty === 'EASY'
-                                  ? 'rgba(16, 185, 129, 0.15)'
-                                  : sub.difficulty === 'MEDIUM'
-                                  ? 'rgba(245, 158, 11, 0.15)'
-                                  : 'rgba(239, 68, 68, 0.15)',
-                              color:
-                                sub.difficulty === 'EASY'
-                                  ? 'var(--status-easy)'
-                                  : sub.difficulty === 'MEDIUM'
-                                  ? 'var(--status-medium)'
-                                  : 'var(--status-hard)',
-                            }}
-                          >
-                            {sub.difficulty}
-                          </span>
-                        </td>
-                        <td>{sub.language}</td>
-                        <td className="sync-time">{formatDate(sub.solvedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+      {/* 6. Section F — Recent Activity */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div className="card-header dashboard-header-flex">
+          <h3>Recent LeetCode Submissions</h3>
+          <Link to="/admin/solved-problems" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+            Full History →
+          </Link>
         </div>
-
-        {/* 7. Section G — Quick Actions */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Quick Actions</h3>
-          </div>
-          <div className="card-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <Link to="/admin/users" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Manage Users</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/admin/teams" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Manage Teams</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/admin/challenges" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Challenges</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/leaderboard" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Leaderboard</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/admin/streaks" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Streaks</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/analytics" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Analytics</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
-              <Link to="/admin/solved-problems" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '0.65rem 1rem' }}>
-                <span>Solved Problems</span>
-                <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>→</span>
-              </Link>
+        <div className="card-body" style={{ padding: 0 }}>
+          {!recentActivity || recentActivity.length === 0 ? (
+            <div className="empty-state" style={{ padding: '1.5rem' }}>
+              <p>No recent LeetCode activity recorded.</p>
             </div>
-          </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Problem Title</th>
+                    <th>Difficulty</th>
+                    <th>Language</th>
+                    <th>Solved Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActivity.map((sub) => (
+                    <tr key={sub.id}>
+                      <td className="font-semibold">{sub.memberName}</td>
+                      <td>
+                        {sub.slug ? (
+                          <a
+                            href={`https://leetcode.com/problems/${sub.slug}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}
+                          >
+                            {sub.title}
+                          </a>
+                        ) : (
+                          <span>{sub.title}</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className="status-badge"
+                          style={{
+                            backgroundColor:
+                              sub.difficulty === 'EASY'
+                                ? 'rgba(16, 185, 129, 0.15)'
+                                : sub.difficulty === 'MEDIUM'
+                                ? 'rgba(245, 158, 11, 0.15)'
+                                : 'rgba(239, 68, 68, 0.15)',
+                            color:
+                              sub.difficulty === 'EASY'
+                                ? 'var(--status-easy)'
+                                : sub.difficulty === 'MEDIUM'
+                                ? 'var(--status-medium)'
+                                : 'var(--status-hard)',
+                          }}
+                        >
+                          {sub.difficulty}
+                        </span>
+                      </td>
+                      <td>{sub.language}</td>
+                      <td className="sync-time">{formatDate(sub.solvedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -78,8 +78,9 @@ exports.getAdminTeamPerformance = async (req, res) => {
     `);
 
     const [challenges] = await pool.query(`
-      SELECT id, team_id as teamId, target, difficulty, start_date as startDate, end_date as endDate, status
+      SELECT id, team_id as teamId, target, difficulty, start_date as startDate, end_date as endDate, status, assignment_type as assignmentType
       FROM team_challenges
+      WHERE assignment_type = 'TEAM' OR assignment_type IS NULL
     `);
 
     const teamPerformanceList = teams.map((t) => {
