@@ -66,7 +66,7 @@ exports.getAdminTeamPerformance = async (req, res) => {
 
     // 2. Fetch all team members & submissions
     const [teamMembers] = await pool.query(`
-      SELECT tm.team_id as teamId, u.id as userId, u.name, u.leetcode_username as leetcodeUsername
+      SELECT tm.team_id as teamId, u.id as userId, u.name, u.leetcode_username as leetcodeUsername, u.leetcode_total_solved as leetcodeTotalSolved
       FROM team_members tm
       JOIN users u ON tm.user_id = u.id
       WHERE u.role = 'MEMBER'
@@ -90,9 +90,8 @@ exports.getAdminTeamPerformance = async (req, res) => {
       // Submissions for this team
       const teamSubs = allSubmissions.filter((s) => memberIds.includes(s.user_id));
 
-      // Total solved (unique problem_slug across all time)
-      const totalSolvedSet = new Set(teamSubs.map((s) => s.slug));
-      const totalSolved = totalSolvedSet.size;
+      // Total solved (Sum of official lifetime totalSolved across all team members)
+      const totalSolved = members.reduce((sum, m) => sum + (m.leetcodeTotalSolved || 0), 0);
 
       // Solved this month
       const startMs = new Date(startOfMonth).getTime();
