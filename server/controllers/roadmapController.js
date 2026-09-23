@@ -305,17 +305,143 @@ exports.getMyRoadmapProgress = async (req, res) => {
       }
     }
 
-    // 5. Recommended Next Target
-    let recommendedNext = null;
+    // --- V14.4 REVISION CALCULATIONS ---
+
+    // Collect all topics with their stage title
+    const allTopicsList = [];
+    stages.forEach((stage) => {
+      stage.topics.forEach((topic) => {
+        allTopicsList.push({
+          ...topic,
+          stageTitle: stage.title,
+          stageId: stage.id,
+        });
+      });
+    });
+
+    // 1. Topics To Continue: Incomplete topics ordered strictly by roadmap sequence
+    const incompleteTopics = allTopicsList
+      .filter((topic) => !topic.isCompleted)
+      .map((topic) => {
+        const firstIncompleteProb = topic.problems.find((p) => !p.completed) || topic.problems[0] || null;
+        return {
+          id: topic.id,
+          title: topic.title,
+          stageTitle: topic.stageTitle,
+          completed: topic.completed,
+          total: topic.total,
+          percentage: topic.percentage,
+          firstIncompleteSlug: firstIncompleteProb ? firstIncompleteProb.slug : null,
+          firstIncompleteTitle: firstIncompleteProb ? firstIncompleteProb.title : null,
+        };
+      });
+
+    // 2. Completed Topics: Fully completed topics
+    const completedTopics = allTopicsList
+      .filter((topic) => topic.isCompleted)
+      .map((topic) => ({
+        id: topic.id,
+        title: topic.title,
+        stageTitle: topic.stageTitle,
+        completed: topic.completed,
+        total: topic.total,
+        percentage: topic.percentage,
+        problemsCount: topic.problems.length,
+      }));
+
+    // 3. Topics With More Practice Remaining: Incomplete topics sorted by lowest completion % first (roadmap order tiebreaker)
+    const morePracticeTopics = [...incompleteTopics].sort((a, b) => {
+      if (a.percentage !== b.percentage) {
+        return a.percentage - b.percentage;
+      }
+      return 0; // maintain roadmap insertion order
+    });
+
+    // 4. Deterministic Quick Revision Problem Selection
+    // Priority:
+    // 1. First incomplete problem in the current incomplete topic
+    // 2. First incomplete problem in the next incomplete topic in sequence
+    // 3. If all 100% completed, deterministic problem based on day of year
+    let quickRevision = null;
     if (nextIncompleteProblem) {
-      recommendedNext = {
+      quickRevision = {
         title: nextIncompleteProblem.title,
         slug: nextIncompleteProblem.slug,
         difficulty: nextIncompleteProblem.difficulty,
         topicTitle: nextIncompleteProblem.topicTitle,
         stageTitle: nextIncompleteProblem.stageTitle,
-        why: 'This is the next incomplete problem in your roadmap sequence.',
+        reason: 'Current active incomplete problem in roadmap sequence',
       };
+    } else if (allTopicsList.length > 0 && allTopicsList[0].problems.length > 0) {
+      // 100% Roadmap Completed fallback
+      const startOfYear = new Date(now.getFullYear(), 0, 0);
+      const diff = now - startOfYear;
+      const oneDay = 1000 * 60 * 60 * 24;
+      const dayOfYear = Math.floor(diff / oneDay);
+      const fallbackIdx = dayOfYear % roadmapSlugsSet.size;
+
+      let counter = 0;
+      let selectedProb = null;
+      for (const stage of stages) {
+        for (const topic of stage.topics) {
+          for (const prob of topic.problems) {
+            if (counter === fallbackIdx) {
+              selectedProb = {
+                title: prob.title,
+                slug: prob.slug,
+                difficulty: prob.difficulty,
+                topicTitle: topic.title,
+                stageTitle: stage.title,
+                reason: 'Completed roadmap review suggestion',
+              };
+              break;
+            }
+            counter++;
+          }
+          if (selectedProb) break;
+        }
+        if (selectedProb) break;
+      }
+      quickRevision = selectedProb || {
+        title: dsaRoadmap[0].topics[0].problems[0].title,
+        slug: dsaRoadmap[0].topics[0].problems[0].slug,
+        difficulty: dsaRoadmap[0].topics[0].problems[0].difficulty,
+        topicTitle: dsaRoadmap[0].topics[0].title,
+        stageTitle: dsaRoadmap[0].title,
+        reason: 'Completed roadmap review suggestion',
+      };
+    }
+
+    // 5. Deterministic Daily Revision Problem Selection
+    // Based on dayOfYear % totalProblems
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const diff = now - startOfYear;
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    const dailyIdx = dayOfYear % (overallTotal > 0 ? overallTotal : 1);
+
+    let dailyCounter = 0;
+    let dailyRevision = null;
+    for (const stage of stages) {
+      for (const topic of stage.topics) {
+        for (const prob of topic.problems) {
+          if (dailyCounter === dailyIdx) {
+            dailyRevision = {
+              title: prob.title,
+              slug: prob.slug,
+              difficulty: prob.difficulty,
+              topicTitle: topic.title,
+              stageTitle: stage.title,
+              completed: prob.completed,
+              dayOfYear,
+            };
+            break;
+          }
+          dailyCounter++;
+        }
+        if (dailyRevision) break;
+      }
+      if (dailyRevision) break;
     }
 
     return res.status(200).json({
@@ -341,6 +467,13 @@ exports.getMyRoadmapProgress = async (req, res) => {
           longestStreak,
         },
         recentlySolvedRoadmap,
+        revision: {
+          incompleteTopics,
+          completedTopics,
+          morePracticeTopics,
+          quickRevision,
+          dailyRevision,
+        },
         stages,
       },
     });
@@ -352,3 +485,4 @@ exports.getMyRoadmapProgress = async (req, res) => {
     });
   }
 };
+

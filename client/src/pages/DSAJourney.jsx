@@ -4,7 +4,8 @@ import { getMyRoadmapProgress } from '../services/api';
 
 const DSAJourney = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('journey'); // 'journey' | 'progress'
+  const [activeTab, setActiveTab] = useState('journey'); // 'journey' | 'progress' | 'revision'
+  const [problemFilter, setProblemFilter] = useState('all'); // 'all' | 'incomplete' | 'completed'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [roadmapData, setRoadmapData] = useState(null);
@@ -65,6 +66,7 @@ const DSAJourney = () => {
     weeklyStats,
     streak,
     recentlySolvedRoadmap,
+    revision,
     stages,
   } = roadmapData || {
     overall: { completed: 0, total: 100, percentage: 0 },
@@ -76,8 +78,33 @@ const DSAJourney = () => {
     weeklyStats: { weeklyActivity: [], problemsSolvedThisWeek: 0, activeDaysThisWeek: 0, avgPerActiveDay: 0 },
     streak: { currentStreak: 0, longestStreak: 0 },
     recentlySolvedRoadmap: [],
+    revision: { incompleteTopics: [], completedTopics: [], morePracticeTopics: [], quickRevision: null, dailyRevision: null },
     stages: [],
   };
+
+  // Collect all problems across stages & topics for revision list
+  const allRoadmapProblems = [];
+  stages.forEach((stage) => {
+    stage.topics.forEach((topic) => {
+      topic.problems.forEach((prob) => {
+        allRoadmapProblems.push({
+          ...prob,
+          stageTitle: stage.title,
+          topicTitle: topic.title,
+          topicId: topic.id,
+        });
+      });
+    });
+  });
+
+  const filteredProblems = allRoadmapProblems.filter((p) => {
+    if (problemFilter === 'incomplete') return !p.completed;
+    if (problemFilter === 'completed') return p.completed;
+    return true;
+  });
+
+  const completedTopicsCount = revision?.completedTopics ? revision.completedTopics.length : 0;
+  const totalTopicsCount = (revision?.completedTopics?.length || 0) + (revision?.incompleteTopics?.length || 0);
 
   // Helper to find next topic in sequence
   const findNextTopic = (currTopicId) => {
@@ -436,21 +463,21 @@ const DSAJourney = () => {
             Journey
           </button>
           <button
-            onClick={() => setActiveTab('progress')}
+            onClick={() => setActiveTab('revision')}
             style={{
               padding: '0.5rem 1.25rem',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor: activeTab === 'progress' ? 'var(--card-bg, #ffffff)' : 'transparent',
-              color: activeTab === 'progress' ? '#3b82f6' : 'var(--text-color)',
+              backgroundColor: activeTab === 'revision' ? 'var(--card-bg, #ffffff)' : 'transparent',
+              color: activeTab === 'revision' ? '#3b82f6' : 'var(--text-color)',
               fontWeight: 700,
               fontSize: '0.9rem',
-              boxShadow: activeTab === 'progress' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              boxShadow: activeTab === 'revision' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
             }}
           >
-            Progress & Stats
+            Revision
           </button>
         </div>
       </div>
@@ -814,8 +841,329 @@ const DSAJourney = () => {
           </div>
         </div>
       )}
+
+      {/* ============================================================
+          TAB 3: REVISION & WEAK TOPIC PRACTICE VIEW (V14.4)
+         ============================================================ */}
+      {activeTab === 'revision' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* 1. Revision Progress Overview */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
+              Revision & Weak Topic Progress
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.05))', borderRadius: '6px', borderLeft: '4px solid #3b82f6' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Completed Problems</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{overall.completed} / {overall.total}</span>
+                <span style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>{overall.percentage}% Overall</span>
+              </div>
+              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-secondary, rgba(16, 185, 129, 0.05))', borderRadius: '6px', borderLeft: '4px solid #059669' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Completed Topics</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{completedTopicsCount} / 31</span>
+                <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>
+                  {Math.round((completedTopicsCount / 31) * 100)}% Topics Mastered
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Quick Revision & Daily Revision Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {/* Quick Revision Card */}
+            {revision?.quickRevision && (
+              <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                  Quick Revision
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.35rem 0' }}>
+                  {revision.quickRevision.title} ({revision.quickRevision.difficulty})
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #64748b)', margin: '0 0 1rem 0' }}>
+                  Topic: <strong>{revision.quickRevision.topicTitle}</strong> — {revision.quickRevision.reason}
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate(`/member/roadmap/problem/${revision.quickRevision.slug}`)}
+                  style={{ fontWeight: 600, padding: '0.5rem 1.1rem', cursor: 'pointer' }}
+                >
+                  Start Revision
+                </button>
+              </div>
+            )}
+
+            {/* Daily Revision Card */}
+            {revision?.dailyRevision && (
+              <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                  Daily Revision
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.35rem 0' }}>
+                  {revision.dailyRevision.title} ({revision.dailyRevision.difficulty})
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #64748b)', margin: '0 0 1rem 0' }}>
+                  Topic: <strong>{revision.dailyRevision.topicTitle}</strong> — Scheduled problem of the day
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate(`/member/roadmap/problem/${revision.dailyRevision.slug}`)}
+                  style={{ fontWeight: 600, padding: '0.5rem 1.1rem', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', cursor: 'pointer' }}
+                >
+                  Solve Daily Challenge
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Topics To Continue (Incomplete topics ordered strictly by roadmap sequence) */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+              Topics To Continue (In Progress)
+            </h3>
+            {revision?.incompleteTopics && revision.incompleteTopics.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {revision.incompleteTopics.map((top) => (
+                  <div
+                    key={top.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color, #e2e8f0)',
+                      backgroundColor: 'var(--card-bg, #ffffff)',
+                      flexWrap: 'wrap',
+                      gap: '0.75rem'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{top.title}</div>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
+                        {top.stageTitle} • {top.completed} / {top.total} ({top.percentage}%)
+                      </span>
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        if (top.firstIncompleteSlug) {
+                          navigate(`/member/roadmap/problem/${top.firstIncompleteSlug}`);
+                        } else {
+                          // open learning content
+                          const foundStage = stages.find((s) => s.topics.some((t) => t.id === top.id));
+                          const foundTopic = foundStage?.topics.find((t) => t.id === top.id);
+                          if (foundTopic) setSelectedTopic(foundTopic);
+                        }
+                      }}
+                      style={{ fontSize: '0.85rem', padding: '0.45rem 0.9rem', cursor: 'pointer' }}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                All topics are 100% completed! Review completed topics below.
+              </p>
+            )}
+          </div>
+
+          {/* 4. Completed Topics (Fully solved topics) */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+              Completed Topics (Mastered)
+            </h3>
+            {revision?.completedTopics && revision.completedTopics.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                {revision.completedTopics.map((top) => (
+                  <div
+                    key={top.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color, #e2e8f0)',
+                      backgroundColor: 'var(--bg-completed, rgba(16, 185, 129, 0.03))'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#059669' }}>
+                        ✓ {top.title}
+                      </div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)' }}>
+                        {top.total} / {top.total} Problems Solved (100%)
+                      </span>
+                    </div>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => {
+                        let found = null;
+                        for (const s of stages) {
+                          for (const t of s.topics) {
+                            if (t.id === top.id) {
+                              found = t;
+                              break;
+                            }
+                          }
+                          if (found) break;
+                        }
+                        if (found) setSelectedTopic(found);
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', cursor: 'pointer' }}
+                    >
+                      Review Topic
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                No topics fully completed yet. Keep practicing your active topics!
+              </p>
+            )}
+          </div>
+
+          {/* 5. Topics With More Practice Remaining (Lowest % completed first) */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+              Topics With More Practice Remaining (Weakest First)
+            </h3>
+            {revision?.morePracticeTopics && revision.morePracticeTopics.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {revision.morePracticeTopics.map((top) => (
+                  <div key={top.id} style={{ fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: '0.35rem' }}>
+                      <span>{top.title} ({top.stageTitle})</span>
+                      <span>{top.completed} / {top.total} ({top.percentage}%)</span>
+                    </div>
+                    <div style={{ height: '8px', width: '100%', backgroundColor: 'var(--bg-secondary, #e2e8f0)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${top.percentage}%`, backgroundColor: '#d97706', transition: 'width 0.3s ease' }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                All topics are fully solved!
+              </p>
+            )}
+          </div>
+
+          {/* 6. Recently Practiced Problems List */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+              Recently Practiced Problems
+            </h3>
+            {recentlySolvedRoadmap && recentlySolvedRoadmap.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {recentlySolvedRoadmap.map((item, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color, #e2e8f0)',
+                      backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.02))'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.title}</div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)' }}>
+                        {item.topicTitle} • {item.difficulty}
+                      </span>
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => navigate(`/member/roadmap/problem/${item.slug}`)}
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', cursor: 'pointer' }}
+                    >
+                      Re-solve
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                No recent activity registered.
+              </p>
+            )}
+          </div>
+
+          {/* 7. Practice Problems Filter & List */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                All Roadmap Problems ({filteredProblems.length})
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['all', 'incomplete', 'completed'].map((flt) => (
+                  <button
+                    key={flt}
+                    onClick={() => setProblemFilter(flt)}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      backgroundColor: problemFilter === flt ? '#3b82f6' : 'transparent',
+                      color: problemFilter === flt ? '#ffffff' : 'var(--text-color)',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {flt.charAt(0).toUpperCase() + flt.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '450px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+              {filteredProblems.map((prob) => (
+                <div
+                  key={prob.slug}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color, #e2e8f0)',
+                    backgroundColor: prob.completed ? 'var(--bg-completed, rgba(16, 185, 129, 0.04))' : 'var(--card-bg, #ffffff)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontWeight: 700, color: prob.completed ? '#059669' : 'var(--text-secondary, #64748b)' }}>
+                      {prob.completed ? '✓' : '○'}
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{prob.title}</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #64748b)' }}>
+                        {prob.topicTitle} • {prob.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => navigate(`/member/roadmap/problem/${prob.slug}`)}
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }}
+                  >
+                    Practice
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default DSAJourney;
+
