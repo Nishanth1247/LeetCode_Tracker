@@ -4,6 +4,7 @@ import { getMyRoadmapProgress } from '../services/api';
 
 const DSAJourney = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('journey'); // 'journey' | 'progress'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [roadmapData, setRoadmapData] = useState(null);
@@ -56,7 +57,27 @@ const DSAJourney = () => {
     );
   }
 
-  const { overall, currentTopic, stages } = roadmapData || { overall: { completed: 0, total: 0, percentage: 0 }, stages: [] };
+  const {
+    overall,
+    difficultyProgress,
+    currentTopic,
+    recommendedNext,
+    weeklyStats,
+    streak,
+    recentlySolvedRoadmap,
+    stages,
+  } = roadmapData || {
+    overall: { completed: 0, total: 100, percentage: 0 },
+    difficultyProgress: {
+      easy: { completed: 0, total: 40, percentage: 0 },
+      medium: { completed: 0, total: 45, percentage: 0 },
+      hard: { completed: 0, total: 15, percentage: 0 },
+    },
+    weeklyStats: { weeklyActivity: [], problemsSolvedThisWeek: 0, activeDaysThisWeek: 0, avgPerActiveDay: 0 },
+    streak: { currentStreak: 0, longestStreak: 0 },
+    recentlySolvedRoadmap: [],
+    stages: [],
+  };
 
   // Helper to find next topic in sequence
   const findNextTopic = (currTopicId) => {
@@ -85,7 +106,7 @@ const DSAJourney = () => {
           onClick={() => setSelectedTopic(null)}
           style={{ marginBottom: '1.5rem', cursor: 'pointer' }}
         >
-          ← Back to Overview
+          ← Back to Journey
         </button>
 
         {/* Topic Header Card */}
@@ -285,24 +306,24 @@ const DSAJourney = () => {
                     </div>
                   </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => navigate(`/member/roadmap/problem/${prob.slug}`)}
-                        style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem', cursor: 'pointer' }}
-                      >
-                        Open Workspace
-                      </button>
-                      <a
-                        href={prob.leetcodeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline"
-                        style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem', textDecoration: 'none' }}
-                      >
-                        Open LeetCode
-                      </a>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => navigate(`/member/roadmap/problem/${prob.slug}`)}
+                      style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem', cursor: 'pointer' }}
+                    >
+                      Open Workspace
+                    </button>
+                    <a
+                      href={prob.leetcodeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.85rem', padding: '0.45rem 0.85rem', textDecoration: 'none' }}
+                    >
+                      Open LeetCode
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
@@ -383,128 +404,416 @@ const DSAJourney = () => {
   };
 
   return (
-    <div className="container" style={{ padding: '2rem 1rem', maxWidth: '900px', margin: '0 auto' }}>
+    <div className="container" style={{ padding: '2rem 1rem', maxWidth: '950px', margin: '0 auto' }}>
       {/* Header Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-          DSA JOURNEY
-        </h1>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
-          From beginner to interview-ready
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+            DSA JOURNEY
+          </h1>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
+            From beginner to interview-ready
+          </p>
+        </div>
+
+        {/* Top-Level Tabs (Journey vs Progress) */}
+        <div style={{ display: 'flex', backgroundColor: 'var(--bg-secondary, #e2e8f0)', padding: '0.25rem', borderRadius: '8px' }}>
+          <button
+            onClick={() => setActiveTab('journey')}
+            style={{
+              padding: '0.5rem 1.25rem',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: activeTab === 'journey' ? 'var(--card-bg, #ffffff)' : 'transparent',
+              color: activeTab === 'journey' ? '#3b82f6' : 'var(--text-color)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              boxShadow: activeTab === 'journey' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Journey
+          </button>
+          <button
+            onClick={() => setActiveTab('progress')}
+            style={{
+              padding: '0.5rem 1.25rem',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: activeTab === 'progress' ? 'var(--card-bg, #ffffff)' : 'transparent',
+              color: activeTab === 'progress' ? '#3b82f6' : 'var(--text-color)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              boxShadow: activeTab === 'progress' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Progress & Stats
+          </button>
+        </div>
       </div>
 
-      {/* Overall Progress Card */}
-      <div className="card" style={{ padding: '1.75rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-          Overall Progress
-        </h2>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <span style={{ fontSize: '2rem', fontWeight: 700 }}>
-            {overall.completed} / {overall.total}
-          </span>
-          <span style={{ fontSize: '1rem', color: 'var(--text-secondary, #64748b)' }}>
-            problems ({overall.percentage}%)
-          </span>
-        </div>
-        <div style={{ height: '10px', width: '100%', backgroundColor: 'var(--bg-secondary, #e2e8f0)', borderRadius: '5px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${overall.percentage}%`, backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }}></div>
-        </div>
-      </div>
-
-      {/* Current Step Card */}
-      {currentTopic && (
-        <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '4px solid #3b82f6' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
-                Current Step
+      {/* ============================================================
+          TAB 1: JOURNEY ROADMAP VIEW
+         ============================================================ */}
+      {activeTab === 'journey' && (
+        <>
+          {/* Overall Progress Card */}
+          <div className="card" style={{ padding: '1.75rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+              Overall Progress
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 700 }}>
+                {overall.completed} / {overall.total}
               </span>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-                {currentTopic.title}
-              </h3>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #64748b)' }}>
-                {currentTopic.completed} / {currentTopic.total} problems completed ({currentTopic.percentage}%)
+              <span style={{ fontSize: '1rem', color: 'var(--text-secondary, #64748b)' }}>
+                Problems ({overall.percentage}%)
               </span>
             </div>
-            <button
-              className="btn btn-primary"
-              onClick={handleContinueJourney}
-              style={{ fontWeight: 600, padding: '0.6rem 1.25rem', cursor: 'pointer' }}
-            >
-              Continue Journey
-            </button>
+            <div style={{ height: '10px', width: '100%', backgroundColor: 'var(--bg-secondary, #e2e8f0)', borderRadius: '5px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${overall.percentage}%`, backgroundColor: '#3b82f6', transition: 'width 0.3s ease' }}></div>
+            </div>
+          </div>
+
+          {/* Current Step Card */}
+          {currentTopic && (
+            <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '4px solid #3b82f6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                    Current Step
+                  </span>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+                    {currentTopic.title}
+                  </h3>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #64748b)' }}>
+                    {currentTopic.completed} / {currentTopic.total} problems completed ({currentTopic.percentage}%)
+                  </span>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleContinueJourney}
+                  style={{ fontWeight: 600, padding: '0.6rem 1.25rem', cursor: 'pointer' }}
+                >
+                  Continue Journey
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stages List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {stages.map((stage) => (
+              <div key={stage.id} className="card" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.03em', margin: 0 }}>
+                    {stage.title}
+                  </h2>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
+                    {stage.completed} / {stage.total} ({stage.percentage}%)
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {stage.topics.map((topic) => {
+                    const isCurrent = currentTopic && currentTopic.id === topic.id;
+                    let statusSymbol = '○';
+                    let statusColor = 'var(--text-secondary, #64748b)';
+
+                    if (topic.isCompleted) {
+                      statusSymbol = '✓';
+                      statusColor = '#059669';
+                    } else if (isCurrent) {
+                      statusSymbol = '→';
+                      statusColor = '#3b82f6';
+                    }
+
+                    return (
+                      <div
+                        key={topic.id}
+                        onClick={() => setSelectedTopic(topic)}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          border: isCurrent ? '1px solid #3b82f6' : '1px solid var(--border-color, #e2e8f0)',
+                          backgroundColor: isCurrent ? 'var(--bg-current, rgba(59, 130, 246, 0.05))' : 'transparent',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontWeight: 700, color: statusColor, width: '1rem', textAlign: 'center' }}>
+                            {statusSymbol}
+                          </span>
+                          <span style={{ fontWeight: isCurrent ? 700 : 500, fontSize: '0.95rem', color: isCurrent ? '#3b82f6' : 'var(--text-color)' }}>
+                            {topic.title}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
+                            {topic.completed} / {topic.total}
+                          </span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                            ›
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ============================================================
+          TAB 2: PROGRESS & STATISTICS VIEW (V14.3)
+         ============================================================ */}
+      {activeTab === 'progress' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* 1. Completed Journey Notice or Current Target */}
+          {overall.isComplete ? (
+            <div className="card" style={{ padding: '1.75rem', borderLeft: '4px solid #059669', textAlign: 'center' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669', margin: '0 0 0.5rem 0' }}>
+                DSA Journey Complete
+              </h2>
+              <p style={{ fontSize: '1rem', color: 'var(--text-color)', margin: '0 0 0.5rem 0' }}>
+                100 / 100 Problems Solved (100%)
+              </p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
+                Congratulations — you have completed the entire DSA roadmap sequence!
+              </p>
+            </div>
+          ) : (
+            recommendedNext && (
+              <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.35rem' }}>
+                  Recommended Next Target
+                </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+                      {recommendedNext.title} ({recommendedNext.difficulty})
+                    </h3>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #64748b)' }}>
+                      Topic: <strong>{recommendedNext.topicTitle}</strong> — {recommendedNext.why}
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => navigate(`/member/roadmap/problem/${recommendedNext.slug}`)}
+                    style={{ fontWeight: 600, padding: '0.6rem 1.25rem', cursor: 'pointer' }}
+                  >
+                    Continue Practice
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* 2. Overall Progress Overview & Difficulty Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            {/* Overall */}
+            <div className="card" style={{ padding: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary, #64748b)', textTransform: 'uppercase' }}>
+                Overall Roadmap
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0' }}>
+                {overall.completed} / {overall.total}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: 600 }}>
+                {overall.percentage}% Solved
+              </div>
+            </div>
+
+            {/* Easy */}
+            <div className="card" style={{ padding: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>
+                Easy Progress
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0' }}>
+                {difficultyProgress.easy.completed} / {difficultyProgress.easy.total}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 600 }}>
+                {difficultyProgress.easy.percentage}%
+              </div>
+            </div>
+
+            {/* Medium */}
+            <div className="card" style={{ padding: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#d97706', textTransform: 'uppercase' }}>
+                Medium Progress
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0' }}>
+                {difficultyProgress.medium.completed} / {difficultyProgress.medium.total}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#d97706', fontWeight: 600 }}>
+                {difficultyProgress.medium.percentage}%
+              </div>
+            </div>
+
+            {/* Hard */}
+            <div className="card" style={{ padding: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' }}>
+                Hard Progress
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0' }}>
+                {difficultyProgress.hard.completed} / {difficultyProgress.hard.total}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#dc2626', fontWeight: 600 }}>
+                {difficultyProgress.hard.percentage}%
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Streak & Weekly Activity Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+            {/* Roadmap Streak Card */}
+            <div className="card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                DSA Roadmap Streak
+              </h3>
+              <div style={{ display: 'flex', gap: '2rem', alignItems: 'baseline' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Current Streak</span>
+                  <span style={{ fontSize: '2rem', fontWeight: 700, color: '#3b82f6' }}>{streak.currentStreak} <span style={{ fontSize: '1rem' }}>days</span></span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Longest Streak</span>
+                  <span style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-color)' }}>{streak.longestStreak} <span style={{ fontSize: '1rem' }}>days</span></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Activity Summary */}
+            <div className="card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                This Week Summary
+              </h3>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Problems Solved</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{weeklyStats.problemsSolvedThisWeek}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Active Days</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{weeklyStats.activeDaysThisWeek} / 7</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', display: 'block' }}>Avg / Active Day</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{weeklyStats.avgPerActiveDay}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Weekly Activity Bar Chart Grid (Mon -> Sun) */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+              Weekly Roadmap Activity (Mon — Sun)
+            </h3>
+            {weeklyStats.problemsSolvedThisWeek === 0 ? (
+              <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                No roadmap activity recorded for this week yet.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', overflowX: 'auto', padding: '0.5rem 0' }}>
+                {weeklyStats.weeklyActivity.map((dayItem) => (
+                  <div key={dayItem.day} style={{ flex: '1 1 0', minWidth: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: dayItem.count > 0 ? '#3b82f6' : 'var(--text-secondary, #64748b)' }}>
+                      {dayItem.count}
+                    </span>
+                    <div style={{ height: '60px', width: '100%', maxWidth: '30px', backgroundColor: 'var(--bg-secondary, #e2e8f0)', borderRadius: '4px', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: dayItem.count > 0 ? `${Math.min(100, dayItem.count * 25)}%` : '0%',
+                          backgroundColor: '#3b82f6',
+                          borderRadius: '4px',
+                          transition: 'height 0.3s ease'
+                        }}
+                      ></div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
+                      {dayItem.day}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 5. Recent Roadmap Activity & Topic Performance */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {/* Recently Solved */}
+            <div className="card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                Recently Solved Roadmap Problems
+              </h3>
+              {recentlySolvedRoadmap.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.9rem', margin: 0 }}>
+                  No roadmap problems solved yet. Start with the first problem in Stage 1!
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {recentlySolvedRoadmap.map((item, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color, #e2e8f0)',
+                        backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.02))'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.title}</div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)' }}>
+                          {item.topicTitle} • {item.difficulty}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                        {new Date(item.solvedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Stage Progress Summary */}
+            <div className="card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                Stage Progress Overview
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                {stages.map((st, idx) => (
+                  <div key={st.id} style={{ fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginBottom: '0.25rem' }}>
+                      <span>Stage {idx}: {st.title.replace(/^STAGE \d+ — /, '')}</span>
+                      <span>{st.completed} / {st.total} ({st.percentage}%)</span>
+                    </div>
+                    <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--bg-secondary, #e2e8f0)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${st.percentage}%`, backgroundColor: st.isCompleted ? '#059669' : '#3b82f6' }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Stages List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {stages.map((stage) => (
-          <div key={stage.id} className="card" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.03em', margin: 0 }}>
-                {stage.title}
-              </h2>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
-                {stage.completed} / {stage.total} ({stage.percentage}%)
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {stage.topics.map((topic) => {
-                const isCurrent = currentTopic && currentTopic.id === topic.id;
-                let statusSymbol = '○';
-                let statusColor = 'var(--text-secondary, #64748b)';
-
-                if (topic.isCompleted) {
-                  statusSymbol = '✓';
-                  statusColor = '#059669';
-                } else if (isCurrent) {
-                  statusSymbol = '→';
-                  statusColor = '#3b82f6';
-                }
-
-                return (
-                  <div
-                    key={topic.id}
-                    onClick={() => setSelectedTopic(topic)}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      border: isCurrent ? '1px solid #3b82f6' : '1px solid var(--border-color, #e2e8f0)',
-                      backgroundColor: isCurrent ? 'var(--bg-current, rgba(59, 130, 246, 0.05))' : 'transparent',
-                      transition: 'background-color 0.2s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontWeight: 700, color: statusColor, width: '1rem', textAlign: 'center' }}>
-                        {statusSymbol}
-                      </span>
-                      <span style={{ fontWeight: isCurrent ? 700 : 500, fontSize: '0.95rem', color: isCurrent ? '#3b82f6' : 'var(--text-color)' }}>
-                        {topic.title}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
-                        {topic.completed} / {topic.total}
-                      </span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #94a3b8)' }}>
-                        ›
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
