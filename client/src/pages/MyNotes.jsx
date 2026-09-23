@@ -118,13 +118,24 @@ const MyNotes = () => {
   return (
     <div className="container" style={{ padding: '2rem 1rem', maxWidth: '950px', margin: '0 auto' }}>
       {/* Page Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-          My DSA Notes
-        </h1>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
-          Your personal learning insights, pattern key points, and recorded mistakes
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+            My DSA Notes
+          </h1>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
+            Your personal learning insights, pattern key points, and recorded mistakes
+          </p>
+        </div>
+        {summary && summary.mistakesCount > 0 && (
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/member/roadmap/mistakes')}
+            style={{ fontWeight: 600, padding: '0.55rem 1.25rem', backgroundColor: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
+          >
+            Review Mistakes ({summary.mistakesCount}) →
+          </button>
+        )}
       </div>
 
       {/* Summary Cards Grid */}

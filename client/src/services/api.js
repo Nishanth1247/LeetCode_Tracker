@@ -316,6 +316,11 @@ export const getTopicRoadmapNotes = async (topicId) => {
   return res.data;
 };
 
+export const getMistakeReview = async () => {
+  const res = await api.get('/roadmap/mistakes');
+  return res.data;
+};
+
 export const createRoadmapNote = async (data) => {
   const res = await api.post('/roadmap/notes', data);
   return res.data;

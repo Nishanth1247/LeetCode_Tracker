@@ -493,13 +493,13 @@ const DSAJourney = () => {
           <button
             onClick={() => setActiveTab('journey')}
             style={{
-              padding: '0.5rem 1.25rem',
+              padding: '0.5rem 1.1rem',
               borderRadius: '6px',
               border: 'none',
               backgroundColor: activeTab === 'journey' ? 'var(--card-bg, #ffffff)' : 'transparent',
               color: activeTab === 'journey' ? '#3b82f6' : 'var(--text-color)',
               fontWeight: 700,
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               boxShadow: activeTab === 'journey' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
@@ -508,21 +508,54 @@ const DSAJourney = () => {
             Journey
           </button>
           <button
+            onClick={() => setActiveTab('progress')}
+            style={{
+              padding: '0.5rem 1.1rem',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: activeTab === 'progress' ? 'var(--card-bg, #ffffff)' : 'transparent',
+              color: activeTab === 'progress' ? '#3b82f6' : 'var(--text-color)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              boxShadow: activeTab === 'progress' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Progress & Stats
+          </button>
+          <button
             onClick={() => setActiveTab('revision')}
             style={{
-              padding: '0.5rem 1.25rem',
+              padding: '0.5rem 1.1rem',
               borderRadius: '6px',
               border: 'none',
               backgroundColor: activeTab === 'revision' ? 'var(--card-bg, #ffffff)' : 'transparent',
               color: activeTab === 'revision' ? '#3b82f6' : 'var(--text-color)',
               fontWeight: 700,
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               boxShadow: activeTab === 'revision' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
             }}
           >
             Revision
+          </button>
+          <button
+            onClick={() => navigate('/member/roadmap/mistakes')}
+            style={{
+              padding: '0.5rem 1.1rem',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#ef4444',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Mistake Review
           </button>
         </div>
       </div>
@@ -761,6 +794,23 @@ const DSAJourney = () => {
                 Personal Insights →
               </div>
             </div>
+
+            {/* Mistake Review (V14.6) */}
+            <div
+              className="card"
+              onClick={() => navigate('/member/roadmap/mistakes')}
+              style={{ padding: '1.25rem', cursor: 'pointer', borderLeft: '4px solid #ef4444' }}
+            >
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>
+                Mistake Review
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0', color: '#ef4444' }}>
+                {notesSummary?.mistakesCount || 0}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: 600 }}>
+                Review Mistakes →
+              </div>
+            </div>
           </div>
 
           {/* 3. Streak & Weekly Activity Cards Grid */}
@@ -930,12 +980,12 @@ const DSAJourney = () => {
             </div>
           </div>
 
-          {/* Revision Notes Integration Card (V14.5) */}
-          <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+          {/* Revision Notes Integration Card (V14.5 & V14.6) */}
+          <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #ef4444' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
-                  Revision Notes
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                  Mistake Review & Revision Notes
                 </span>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>
                   Personal Learning Notes Summary
@@ -946,13 +996,22 @@ const DSAJourney = () => {
                   <span>Key points: <strong style={{ color: '#8b5cf6' }}>{notesSummary?.keyPointsCount || 0}</strong></span>
                 </div>
               </div>
-              <button
-                className="btn btn-primary"
-                onClick={() => navigate('/member/roadmap/notes')}
-                style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', cursor: 'pointer' }}
-              >
-                Review My Notes →
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate('/member/roadmap/mistakes')}
+                  style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
+                >
+                  Review Mistakes →
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/member/roadmap/notes')}
+                  style={{ fontWeight: 600, padding: '0.6rem 1.25rem', cursor: 'pointer' }}
+                >
+                  My Notes
+                </button>
+              </div>
             </div>
           </div>
 

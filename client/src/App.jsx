@@ -11,6 +11,7 @@ import MemberTasks from './pages/MemberTasks';
 import DSAJourney from './pages/DSAJourney';
 import RoadmapProblem from './pages/RoadmapProblem';
 import MyNotes from './pages/MyNotes';
+import MistakeReview from './pages/MistakeReview';
 import AdminDashboard from './pages/AdminDashboard';
 import Leaderboard from './pages/Leaderboard';
 import Analytics from './pages/Analytics';
@@ -93,6 +94,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <MyNotes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/member/roadmap/mistakes"
+            element={
+              <ProtectedRoute>
+                <MistakeReview />
               </ProtectedRoute>
             }
           />

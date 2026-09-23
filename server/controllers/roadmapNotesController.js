@@ -360,3 +360,197 @@ exports.getMyNotes = async (req, res) => {
     });
   }
 };
+
+// 7. Get Mistake Review Summary & Prioritized Problems (V14.6)
+exports.getMistakeReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Build map of roadmap problem metadata and slug -> roadmap order index
+    const slugMetaMap = {};
+    const slugOrderMap = {};
+    let orderCounter = 0;
+
+    dsaRoadmap.forEach((stage) => {
+      stage.topics.forEach((topic) => {
+        topic.problems.forEach((prob) => {
+          slugMetaMap[prob.slug] = {
+            title: prob.title,
+            slug: prob.slug,
+            difficulty: prob.difficulty,
+            topicId: topic.id,
+            topicTitle: topic.title,
+            stageTitle: stage.title,
+          };
+          slugOrderMap[prob.slug] = orderCounter++;
+        });
+      });
+    });
+
+    // 1. Fetch user's distinct solved roadmap submission slugs
+    const [solvedSubs] = await pool.query(
+      `SELECT DISTINCT problem_slug 
+       FROM leetcode_submissions 
+       WHERE user_id = ?`,
+      [userId]
+    );
+    const solvedSlugsSet = new Set(solvedSubs.map((s) => s.problem_slug));
+
+    // 2. Fetch all MISTAKE notes for user
+    const [mistakeNotes] = await pool.query(
+      `SELECT id, user_id, problem_slug, topic_id, note_type, content, created_at, updated_at
+       FROM roadmap_notes
+       WHERE user_id = ? AND note_type = 'MISTAKE'
+       ORDER BY updated_at DESC`,
+      [userId]
+    );
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    let recentMistakesCount = 0;
+    const topicMistakeMap = {}; // topicId -> { topicTitle, count }
+    const problemMistakesMap = {}; // problem_slug -> array of notes
+
+    mistakeNotes.forEach((note) => {
+      const noteDate = new Date(note.updated_at);
+      if (noteDate >= sevenDaysAgo) {
+        recentMistakesCount++;
+      }
+
+      if (note.topic_id) {
+        if (!topicMistakeMap[note.topic_id]) {
+          const meta = Object.values(slugMetaMap).find((m) => m.topicId === note.topic_id);
+          topicMistakeMap[note.topic_id] = {
+            topicId: note.topic_id,
+            topicTitle: meta ? meta.topicTitle : note.topic_id,
+            count: 0,
+          };
+        }
+        topicMistakeMap[note.topic_id].count++;
+      }
+
+      if (note.problem_slug && validSlugsSet.has(note.problem_slug)) {
+        if (!problemMistakesMap[note.problem_slug]) {
+          problemMistakesMap[note.problem_slug] = [];
+        }
+        problemMistakesMap[note.problem_slug].push(note);
+      }
+    });
+
+    // 3. Process each problem card & calculate deterministic review priority
+    const problemCards = Object.keys(problemMistakesMap).map((slug) => {
+      const notesForProblem = problemMistakesMap[slug];
+      const meta = slugMetaMap[slug] || { title: slug, slug, difficulty: 'EASY', topicTitle: 'General' };
+      const isCompleted = solvedSlugsSet.has(slug);
+
+      // Find latest mistake note date for this problem
+      let latestMs = 0;
+      notesForProblem.forEach((n) => {
+        const ms = new Date(n.updated_at).getTime();
+        if (ms > latestMs) latestMs = ms;
+      });
+
+      const ageInDays = (now.getTime() - latestMs) / (24 * 60 * 60 * 1000);
+
+      // Recent mistake weight
+      let recentWeight = 1;
+      if (ageInDays <= 1) recentWeight = 5;
+      else if (ageInDays <= 3) recentWeight = 4;
+      else if (ageInDays <= 7) recentWeight = 3;
+      else if (ageInDays <= 14) recentWeight = 2;
+
+      // Completion bonus
+      const completionBonus = isCompleted ? 1 : 3;
+
+      // Multiple mistake notes bonus
+      let countBonus = 0;
+      if (notesForProblem.length === 2) countBonus = 1;
+      else if (notesForProblem.length >= 3) countBonus = 2;
+
+      const priorityScore = recentWeight + completionBonus + countBonus;
+
+      return {
+        slug,
+        title: meta.title,
+        difficulty: meta.difficulty,
+        topicId: meta.topicId,
+        topicTitle: meta.topicTitle,
+        stageTitle: meta.stageTitle,
+        completed: isCompleted,
+        mistakeCount: notesForProblem.length,
+        notes: notesForProblem,
+        latestMistakeAt: new Date(latestMs).toISOString(),
+        priorityScore,
+        roadmapOrder: slugOrderMap[slug] !== undefined ? slugOrderMap[slug] : 999,
+      };
+    });
+
+    // Sort problem cards by priorityScore DESC, latestMistakeAt DESC, roadmapOrder ASC
+    problemCards.sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore;
+      }
+      const bTime = new Date(b.latestMistakeAt).getTime();
+      const aTime = new Date(a.latestMistakeAt).getTime();
+      if (bTime !== aTime) {
+        return bTime - aTime;
+      }
+      return a.roadmapOrder - b.roadmapOrder;
+    });
+
+    // Recommended target (top item in review queue)
+    let recommended = null;
+    if (problemCards.length > 0) {
+      const topCard = problemCards[0];
+      recommended = {
+        slug: topCard.slug,
+        title: topCard.title,
+        difficulty: topCard.difficulty,
+        topicTitle: topCard.topicTitle,
+        stageTitle: topCard.stageTitle,
+        mistakeCount: topCard.mistakeCount,
+        completed: topCard.completed,
+        reason: 'You have personal mistake notes for this problem. Review them before attempting the problem again.',
+      };
+    }
+
+    // Sort topic summaries by count DESC
+    const topicSummary = Object.values(topicMistakeMap).sort((a, b) => b.count - a.count);
+
+    // Recent 5 mistake notes
+    const recent5Mistakes = mistakeNotes.slice(0, 5).map((n) => {
+      const meta = slugMetaMap[n.problem_slug];
+      return {
+        id: n.id,
+        slug: n.problem_slug,
+        title: meta ? meta.title : n.problem_slug,
+        topicTitle: meta ? meta.topicTitle : n.topic_id || 'General',
+        content: n.content,
+        updatedAt: n.updated_at,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          mistakeNotes: mistakeNotes.length,
+          problemsWithMistakes: problemCards.length,
+          recentMistakes: recentMistakesCount,
+        },
+        recommended,
+        problems: problemCards,
+        topicSummary,
+        recent: recent5Mistakes,
+      },
+    });
+  } catch (error) {
+    console.error('getMistakeReview error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch mistake review data.',
+    });
+  }
+};
+
