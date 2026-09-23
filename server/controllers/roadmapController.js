@@ -34,13 +34,26 @@ exports.getMyRoadmapProgress = async (req, res) => {
     });
 
     // 1. Fetch user's distinct solved submission records for roadmap matching
-    const [userSubs] = await pool.query(
-      `SELECT problem_slug, problem_title, difficulty, solved_at 
-       FROM leetcode_submissions 
-       WHERE user_id = ? 
-       ORDER BY solved_at DESC`,
-      [userId]
-    );
+    let userSubs = [];
+    try {
+      const [rows] = await pool.query(
+        `SELECT problem_slug, problem_title, difficulty, solved_at 
+         FROM leetcode_submissions 
+         WHERE user_id = ? 
+         ORDER BY solved_at DESC`,
+        [userId]
+      );
+      userSubs = rows || [];
+    } catch (dbErr) {
+      console.error('[ROADMAP_DB_ERROR] Failed querying leetcode_submissions for user_id:', userId, {
+        message: dbErr.message,
+        code: dbErr.code,
+        errno: dbErr.errno,
+        sqlState: dbErr.sqlState,
+        sqlMessage: dbErr.sqlMessage,
+      });
+      userSubs = [];
+    }
 
     // Distinct solved roadmap slugs
     const solvedRoadmapSlugsSet = new Set();
@@ -444,6 +457,8 @@ exports.getMyRoadmapProgress = async (req, res) => {
       if (dailyRevision) break;
     }
 
+    const recommendedNext = nextIncompleteProblem;
+
     return res.status(200).json({
       success: true,
       data: {
@@ -478,7 +493,14 @@ exports.getMyRoadmapProgress = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('getMyRoadmapProgress error:', error);
+    console.error('[ROADMAP_CONTROLLER_ERROR] GET /api/roadmap/me failed for user_id:', req?.user?.id, {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+    });
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch DSA Journey progress.',

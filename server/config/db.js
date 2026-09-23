@@ -75,6 +75,24 @@ async function testConnection() {
       `);
     }
 
+    // Ensure leetcode_submissions table exists
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS leetcode_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        problem_title VARCHAR(255) NOT NULL,
+        problem_slug VARCHAR(255) NOT NULL,
+        difficulty ENUM('EASY','MEDIUM','HARD') NULL,
+        language VARCHAR(100) NULL,
+        solved_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_solved_at (user_id, solved_at),
+        INDEX idx_user_problem (user_id, problem_slug),
+        UNIQUE KEY uniq_user_problem_solved (user_id, problem_slug, solved_at)
+      )
+    `);
+
     // Ensure roadmap_notes table exists (V14.5)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS roadmap_notes (
