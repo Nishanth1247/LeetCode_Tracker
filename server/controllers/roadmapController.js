@@ -144,8 +144,8 @@ exports.getMyRoadmapProgress = async (req, res) => {
           problems,
         };
 
-        // Track the very first incomplete topic (or the first topic if 0 total)
-        if (!currentTopic && (!isTopicCompleted || topicTotal === 0)) {
+        // Track the very first incomplete topic
+        if (!currentTopic && !isTopicCompleted) {
           currentTopic = {
             id: topic.id,
             title: topic.title,

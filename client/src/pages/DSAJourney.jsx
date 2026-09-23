@@ -633,9 +633,15 @@ const DSAJourney = () => {
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.03em', margin: 0 }}>
                     {stage.title}
                   </h2>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
-                    {stage.completed} / {stage.total} ({stage.percentage}%)
-                  </span>
+                  {stage.isCompleted ? (
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#059669', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
+                      ✓ Completed ({stage.percentage}%)
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
+                      {stage.completed} / {stage.total} ({stage.percentage}%)
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -678,8 +684,8 @@ const DSAJourney = () => {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
-                            {topic.completed} / {topic.total}
+                          <span style={{ fontSize: '0.85rem', color: topic.isCompleted ? '#059669' : 'var(--text-secondary, #64748b)', fontWeight: topic.isCompleted ? 600 : 400 }}>
+                            {topic.total > 0 ? `${topic.completed} / ${topic.total}` : (topic.isCompleted ? 'Completed' : '0 / 0')}
                           </span>
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #94a3b8)' }}>
                             ›

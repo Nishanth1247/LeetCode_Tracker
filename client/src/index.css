@@ -2,11 +2,17 @@
   --bg: #F8FAFC;
   --surface: #FFFFFF;
   --card: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --bg-secondary: #F1F5F9;
+  --bg-completed: rgba(16, 185, 129, 0.05);
+  --bg-current: rgba(59, 130, 246, 0.05);
   --surface-subtle: #F5F3FF;
   --text: #111827;
+  --text-color: #111827;
   --text-secondary: #475569;
   --muted: #64748B;
   --border: #E2E8F0;
+  --border-color: #E2E8F0;
   
   --primary: #2563EB;
   --primary-hover: #1D4ED8;
@@ -33,17 +39,24 @@
   --radius-lg: 14px;
 
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
 }
 
 [data-theme="dark"] {
   --bg: #050505;
   --surface: #0B0B0D;
   --card: #0B0B0D;
+  --card-bg: #0B0B0D;
+  --bg-secondary: #111114;
+  --bg-completed: rgba(16, 185, 129, 0.1);
+  --bg-current: rgba(59, 130, 246, 0.1);
   --surface-subtle: #111114;
   --text: #F5F5F5;
+  --text-color: #F5F5F5;
   --text-secondary: #A1A1AA;
   --muted: #71717A;
   --border: #222228;
+  --border-color: #222228;
 
   --primary: #7C3AED;
   --primary-hover: #8B5CF6;
@@ -64,6 +77,53 @@
 
   --table-header-bg: #111114;
   --table-row-hover: #16161B;
+  color-scheme: dark;
+}
+
+/* Global native select, input, textarea and option dark mode rules */
+select, input, textarea {
+  background-color: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+  background-color: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="light"] select,
+[data-theme="light"] input,
+[data-theme="light"] textarea {
+  color-scheme: light;
+  background-color: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--text);
+}
+
+[data-theme="dark"] select option {
+  background-color: #0B0B0D;
+  color: #F5F5F5;
+}
+
+[data-theme="light"] select option {
+  background-color: #FFFFFF;
+  color: #111827;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
 }
 
 * {
