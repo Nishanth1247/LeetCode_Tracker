@@ -174,13 +174,22 @@ const MistakeReview = () => {
                     Topic: <strong>{recommended.topicTitle}</strong> — {recommended.reason} ({recommended.mistakeCount} mistake note{recommended.mistakeCount === 1 ? '' : 's'})
                   </p>
                 </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => navigate(`/member/roadmap/problem/${recommended.slug}`)}
-                  style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
-                >
-                  Review Now
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => navigate('/member/roadmap/session?mode=mistakes')}
+                    style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#3b82f6', borderColor: '#3b82f6', cursor: 'pointer' }}
+                  >
+                    Start Mistake Session
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => navigate(`/member/roadmap/problem/${recommended.slug}`)}
+                    style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
+                  >
+                    Review Now
+                  </button>
+                </div>
               </div>
             </div>
           )}

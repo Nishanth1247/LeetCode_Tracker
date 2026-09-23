@@ -554,3 +554,43 @@ exports.getMistakeReview = async (req, res) => {
   }
 };
 
+// 8. Get Revision Session Raw Data (V14.7)
+exports.getSessionData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Fetch user's distinct solved roadmap submission slugs
+    const [solvedSubs] = await pool.query(
+      `SELECT DISTINCT problem_slug 
+       FROM leetcode_submissions 
+       WHERE user_id = ?`,
+      [userId]
+    );
+    const solvedSlugs = solvedSubs.map((s) => s.problem_slug);
+
+    // 2. Fetch all notes for user
+    const [allNotes] = await pool.query(
+      `SELECT id, user_id, problem_slug, topic_id, note_type, content, created_at, updated_at
+       FROM roadmap_notes
+       WHERE user_id = ?
+       ORDER BY updated_at DESC`,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        solvedSlugs,
+        notes: allNotes,
+      },
+    });
+  } catch (error) {
+    console.error('getSessionData error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch revision session data.',
+    });
+  }
+};
+
+

@@ -493,6 +493,13 @@ const MemberDashboard = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => navigate('/member/roadmap/session')}
+                      style={{ fontWeight: 600, padding: '0.55rem 1.1rem', cursor: 'pointer', borderColor: '#3b82f6', color: '#3b82f6' }}
+                    >
+                      Start 5-Problem Session
+                    </button>
                     {roadmapInfo.nextProblem ? (
                       <button
                         className="btn btn-primary"

@@ -557,6 +557,22 @@ const DSAJourney = () => {
           >
             Mistake Review
           </button>
+          <button
+            onClick={() => navigate('/member/roadmap/session')}
+            style={{
+              padding: '0.5rem 1.1rem',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#3b82f6',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Revision Sessions
+          </button>
         </div>
       </div>
 
@@ -999,10 +1015,17 @@ const DSAJourney = () => {
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   className="btn btn-primary"
+                  onClick={() => navigate('/member/roadmap/session')}
+                  style={{ fontWeight: 600, padding: '0.6rem 1.25rem', cursor: 'pointer' }}
+                >
+                  Start Session →
+                </button>
+                <button
+                  className="btn btn-primary"
                   onClick={() => navigate('/member/roadmap/mistakes')}
                   style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
                 >
-                  Review Mistakes →
+                  Review Mistakes
                 </button>
                 <button
                   className="btn btn-secondary"

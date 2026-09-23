@@ -321,6 +321,11 @@ export const getMistakeReview = async () => {
   return res.data;
 };
 
+export const getRevisionSessionData = async () => {
+  const res = await api.get('/roadmap/session-data');
+  return res.data;
+};
+
 export const createRoadmapNote = async (data) => {
   const res = await api.post('/roadmap/notes', data);
   return res.data;
