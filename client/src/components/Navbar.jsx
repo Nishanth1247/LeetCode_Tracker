@@ -135,6 +135,13 @@ const Navbar = () => {
                     DSA Journey
                   </Link>
                   <Link
+                    to="/member/roadmap/notes"
+                    className={`nav-item ${location.pathname === '/member/roadmap/notes' ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    My Notes
+                  </Link>
+                  <Link
                     to="/my-team"
                     className={`nav-item ${location.pathname === '/my-team' ? 'active' : ''}`}
                     onClick={closeMenu}

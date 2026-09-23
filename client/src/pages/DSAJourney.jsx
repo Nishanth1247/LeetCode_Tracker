@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyRoadmapProgress } from '../services/api';
+import { getMyRoadmapProgress, getTopicRoadmapNotes, getMyRoadmapNotes } from '../services/api';
 
 const DSAJourney = () => {
   const navigate = useNavigate();
@@ -10,11 +10,42 @@ const DSAJourney = () => {
   const [error, setError] = useState(null);
   const [roadmapData, setRoadmapData] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const [selectedTopicNotesCount, setSelectedTopicNotesCount] = useState(0);
+  const [notesSummary, setNotesSummary] = useState(null);
   const [activeLang, setActiveLang] = useState('python');
 
   useEffect(() => {
     fetchRoadmap();
+    fetchNotesSummary();
   }, []);
+
+  const fetchNotesSummary = async () => {
+    try {
+      const res = await getMyRoadmapNotes();
+      if (res.success && res.data) {
+        setNotesSummary(res.data.summary || null);
+      }
+    } catch (err) {
+      console.error('Fetch notes summary error:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTopic) {
+      fetchTopicNotesCount(selectedTopic.id);
+    }
+  }, [selectedTopic]);
+
+  const fetchTopicNotesCount = async (topicId) => {
+    try {
+      const res = await getTopicRoadmapNotes(topicId);
+      if (res.success && res.data) {
+        setSelectedTopicNotesCount(res.data.length);
+      }
+    } catch (err) {
+      console.error('Fetch topic notes count error:', err);
+    }
+  };
 
   const fetchRoadmap = async () => {
     try {
@@ -145,6 +176,20 @@ const DSAJourney = () => {
             <span style={{ fontSize: '0.875rem', fontWeight: 600, padding: '0.25rem 0.75rem', borderRadius: '4px', backgroundColor: selectedTopic.isCompleted ? '#059669' : '#3b82f6', color: '#fff' }}>
               {selectedTopic.completed} / {selectedTopic.total} Completed ({selectedTopic.percentage}%)
             </span>
+          </div>
+
+          {/* My Notes Integration Box (V14.5) */}
+          <div style={{ marginBottom: '1.5rem', padding: '0.85rem 1rem', borderRadius: '6px', backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.04))', border: '1px solid var(--border-color, #cbd5e1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-color)' }}>
+              My Notes: <strong>You have {selectedTopicNotesCount} note{selectedTopicNotesCount === 1 ? '' : 's'} for this topic.</strong>
+            </span>
+            <button
+              className="btn btn-outline"
+              onClick={() => navigate(`/member/roadmap/notes?topicId=${selectedTopic.id}`)}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }}
+            >
+              View My Notes →
+            </button>
           </div>
 
           {/* Section 01: What is this? */}
@@ -699,6 +744,23 @@ const DSAJourney = () => {
                 {difficultyProgress.hard.percentage}%
               </div>
             </div>
+
+            {/* My Notes (V14.5) */}
+            <div
+              className="card"
+              onClick={() => navigate('/member/roadmap/notes')}
+              style={{ padding: '1.25rem', cursor: 'pointer', borderLeft: '4px solid #8b5cf6' }}
+            >
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase' }}>
+                My Notes
+              </span>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0.25rem 0', color: '#8b5cf6' }}>
+                {notesSummary?.totalNotes || 0}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)', fontWeight: 600 }}>
+                Personal Insights →
+              </div>
+            </div>
           </div>
 
           {/* 3. Streak & Weekly Activity Cards Grid */}
@@ -865,6 +927,32 @@ const DSAJourney = () => {
                   {Math.round((completedTopicsCount / 31) * 100)}% Topics Mastered
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Revision Notes Integration Card (V14.5) */}
+          <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                  Revision Notes
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>
+                  Personal Learning Notes Summary
+                </h3>
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.9rem', color: 'var(--text-secondary, #64748b)' }}>
+                  <span>Problems with notes: <strong style={{ color: 'var(--text-color)' }}>{notesSummary?.problemsWithNotes || 0}</strong></span>
+                  <span>Mistakes recorded: <strong style={{ color: '#ef4444' }}>{notesSummary?.mistakesCount || 0}</strong></span>
+                  <span>Key points: <strong style={{ color: '#8b5cf6' }}>{notesSummary?.keyPointsCount || 0}</strong></span>
+                </div>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate('/member/roadmap/notes')}
+                style={{ fontWeight: 600, padding: '0.6rem 1.25rem', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', cursor: 'pointer' }}
+              >
+                Review My Notes →
+              </button>
             </div>
           </div>
 

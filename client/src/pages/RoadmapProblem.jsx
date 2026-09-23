@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getMyRoadmapProgress } from '../services/api';
+import {
+  getMyRoadmapProgress,
+  getProblemRoadmapNotes,
+  createRoadmapNote,
+  updateRoadmapNote,
+  deleteRoadmapNote
+} from '../services/api';
+
+const NOTE_TYPES = [
+  { value: 'UNDERSTANDING', label: 'Understanding' },
+  { value: 'APPROACH', label: 'Approach' },
+  { value: 'MISTAKE', label: 'Mistake' },
+  { value: 'KEY_POINT', label: 'Key Point' },
+  { value: 'GENERAL', label: 'General' },
+];
 
 const RoadmapProblem = () => {
   const { slug } = useParams();
@@ -11,9 +25,32 @@ const RoadmapProblem = () => {
   const [roadmapData, setRoadmapData] = useState(null);
   const [visibleHintsCount, setVisibleHintsCount] = useState(0);
 
+  // Notes state
+  const [problemNotes, setProblemNotes] = useState([]);
+  const [noteType, setNoteType] = useState('UNDERSTANDING');
+  const [noteContent, setNoteContent] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editType, setEditType] = useState('GENERAL');
+  const [savingEdit, setSavingEdit] = useState(false);
+
   useEffect(() => {
     fetchRoadmap();
+    fetchNotes();
   }, [slug]);
+
+  const fetchNotes = async () => {
+    try {
+      const res = await getProblemRoadmapNotes(slug);
+      if (res.success && res.data) {
+        setProblemNotes(res.data);
+      }
+    } catch (err) {
+      console.error('Fetch problem notes error:', err);
+    }
+  };
 
   const fetchRoadmap = async () => {
     try {
@@ -353,6 +390,328 @@ const RoadmapProblem = () => {
               >
                 Open on LeetCode
               </a>
+            </div>
+          )}
+        </div>
+
+        {/* ============================================================
+            MY NOTES SECTION (V14.5)
+           ============================================================ */}
+        <div className="card" style={{ padding: '1.75rem', marginTop: '2rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 1rem 0' }}>
+            My Notes
+          </h2>
+
+          {/* Educational Guidance Box */}
+          <div style={{ padding: '1rem', borderRadius: '6px', backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.05))', borderLeft: '4px solid #3b82f6', marginBottom: '1.25rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6', display: 'block', marginBottom: '0.4rem' }}>
+              Useful things to write down:
+            </span>
+            <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-color)', lineHeight: '1.5' }}>
+              <li>What pattern did I recognize?</li>
+              <li>What mistake did I make?</li>
+              <li>Why does the optimized approach work?</li>
+              <li>What should I remember next time?</li>
+            </ul>
+          </div>
+
+          {/* Quick Template Buttons */}
+          <div style={{ marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)', display: 'block', marginBottom: '0.4rem' }}>
+              Quick Templates:
+            </span>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.3rem 0.65rem', cursor: 'pointer' }}
+                onClick={() => {
+                  setNoteType('UNDERSTANDING');
+                  setNoteContent((prev) => (prev ? prev : 'I understood... '));
+                }}
+              >
+                I understood...
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.3rem 0.65rem', cursor: 'pointer', borderColor: '#ef4444', color: '#ef4444' }}
+                onClick={() => {
+                  setNoteType('MISTAKE');
+                  setNoteContent((prev) => (prev ? prev : 'My mistake: '));
+                }}
+              >
+                My mistake...
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.3rem 0.65rem', cursor: 'pointer', borderColor: '#8b5cf6', color: '#8b5cf6' }}
+                onClick={() => {
+                  setNoteType('KEY_POINT');
+                  setNoteContent((prev) => (prev ? prev : 'Remember: '));
+                }}
+              >
+                Remember...
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.3rem 0.65rem', cursor: 'pointer', borderColor: '#3b82f6', color: '#3b82f6' }}
+                onClick={() => {
+                  setNoteType('APPROACH');
+                  setNoteContent((prev) => (prev ? prev : 'My approach: '));
+                }}
+              >
+                My approach...
+              </button>
+            </div>
+          </div>
+
+          {/* Note Type Selector */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)', display: 'block', marginBottom: '0.35rem' }}>
+              Note Type
+            </label>
+            <select
+              value={noteType}
+              onChange={(e) => setNoteType(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color, #cbd5e1)', backgroundColor: 'var(--card-bg, #ffffff)', color: 'var(--text-color)', fontWeight: 600, fontSize: '0.9rem' }}
+            >
+              {NOTE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Note Content Textarea */}
+          <div style={{ marginBottom: '1rem' }}>
+            <textarea
+              rows={4}
+              placeholder="Write your personal notes for this problem..."
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.85rem',
+                borderRadius: '6px',
+                border: '1px solid var(--border-color, #cbd5e1)',
+                backgroundColor: 'var(--card-bg, #ffffff)',
+                color: 'var(--text-color)',
+                fontSize: '0.95rem',
+                fontFamily: 'inherit',
+                lineHeight: '1.5',
+                boxSizing: 'border-box'
+              }}
+            ></textarea>
+          </div>
+
+          {/* Save Button & Status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={savingNote || !noteContent.trim()}
+              onClick={async () => {
+                if (!noteContent.trim()) return;
+                try {
+                  setSavingNote(true);
+                  const res = await createRoadmapNote({
+                    problemSlug: slug,
+                    topicId: matchedTopic.id,
+                    noteType,
+                    content: noteContent,
+                  });
+                  if (res.success) {
+                    setNoteContent('');
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 3000);
+                    fetchNotes();
+                  }
+                } catch (err) {
+                  console.error('Save note error:', err);
+                } finally {
+                  setSavingNote(false);
+                }
+              }}
+              style={{ fontWeight: 600, padding: '0.55rem 1.25rem', cursor: noteContent.trim() ? 'pointer' : 'not-allowed' }}
+            >
+              {savingNote ? 'Saving...' : 'Save Note'}
+            </button>
+
+            {saveSuccess && (
+              <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>
+                ✓ Saved
+              </span>
+            )}
+          </div>
+
+          {/* List of Existing Notes for this Problem */}
+          {problemNotes.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '1.25rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--text-secondary, #64748b)' }}>
+                Saved Notes ({problemNotes.length})
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {problemNotes.map((note) => {
+                  const isEditing = editingNoteId === note.id;
+
+                  return (
+                    <div
+                      key={note.id}
+                      style={{
+                        padding: '1rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color, #e2e8f0)',
+                        backgroundColor: 'var(--bg-secondary, rgba(59, 130, 246, 0.02))',
+                        borderLeft:
+                          note.note_type === 'MISTAKE'
+                            ? '4px solid #ef4444'
+                            : note.note_type === 'KEY_POINT'
+                            ? '4px solid #8b5cf6'
+                            : note.note_type === 'UNDERSTANDING'
+                            ? '4px solid #059669'
+                            : note.note_type === 'APPROACH'
+                            ? '4px solid #3b82f6'
+                            : '4px solid #64748b'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '4px',
+                            backgroundColor:
+                              note.note_type === 'MISTAKE'
+                                ? 'rgba(239, 68, 68, 0.15)'
+                                : note.note_type === 'KEY_POINT'
+                                ? 'rgba(139, 92, 246, 0.15)'
+                                : note.note_type === 'UNDERSTANDING'
+                                ? 'rgba(16, 185, 129, 0.15)'
+                                : note.note_type === 'APPROACH'
+                                ? 'rgba(59, 130, 246, 0.15)'
+                                : 'rgba(100, 116, 139, 0.15)',
+                            color:
+                              note.note_type === 'MISTAKE'
+                                ? '#ef4444'
+                                : note.note_type === 'KEY_POINT'
+                                ? '#8b5cf6'
+                                : note.note_type === 'UNDERSTANDING'
+                                ? '#059669'
+                                : note.note_type === 'APPROACH'
+                                ? '#3b82f6'
+                                : '#64748b'
+                          }}
+                        >
+                          {note.note_type}
+                        </span>
+
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                          {new Date(note.updated_at).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {isEditing ? (
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <select
+                            value={editType}
+                            onChange={(e) => setEditType(e.target.value)}
+                            style={{ padding: '0.35rem', borderRadius: '4px', border: '1px solid var(--border-color, #cbd5e1)', marginBottom: '0.5rem', display: 'block' }}
+                          >
+                            {NOTE_TYPES.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </select>
+                          <textarea
+                            rows={3}
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color, #cbd5e1)', marginBottom: '0.5rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                          ></textarea>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn-primary"
+                              disabled={savingEdit}
+                              onClick={async () => {
+                                if (!editContent.trim()) return;
+                                try {
+                                  setSavingEdit(true);
+                                  const res = await updateRoadmapNote(note.id, {
+                                    noteType: editType,
+                                    content: editContent,
+                                  });
+                                  if (res.success) {
+                                    setEditingNoteId(null);
+                                    fetchNotes();
+                                  }
+                                } catch (err) {
+                                  console.error('Update note error:', err);
+                                } finally {
+                                  setSavingEdit(false);
+                                }
+                              }}
+                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }}
+                            >
+                              {savingEdit ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => setEditingNoteId(null)}
+                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <p style={{ fontSize: '0.95rem', lineHeight: '1.5', color: 'var(--text-color)', whiteSpace: 'pre-wrap', margin: '0 0 0.75rem 0' }}>
+                            {note.content}
+                          </p>
+
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => {
+                                setEditingNoteId(note.id);
+                                setEditContent(note.content);
+                                setEditType(note.note_type);
+                              }}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', cursor: 'pointer' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-outline"
+                              onClick={async () => {
+                                if (!window.confirm('Are you sure you want to delete this note?')) return;
+                                try {
+                                  const res = await deleteRoadmapNote(note.id);
+                                  if (res.success) {
+                                    fetchNotes();
+                                  }
+                                } catch (err) {
+                                  console.error('Delete note error:', err);
+                                }
+                              }}
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', color: '#ef4444', borderColor: '#ef4444', cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

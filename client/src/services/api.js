@@ -299,4 +299,36 @@ export const getMyRoadmapProgress = async () => {
   return res.data;
 };
 
+// DSA Personal Learning Notes helpers (V14.5)
+export const getMyRoadmapNotes = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const res = await api.get(`/roadmap/notes${query ? `?${query}` : ''}`);
+  return res.data;
+};
+
+export const getProblemRoadmapNotes = async (slug) => {
+  const res = await api.get(`/roadmap/notes/problem/${slug}`);
+  return res.data;
+};
+
+export const getTopicRoadmapNotes = async (topicId) => {
+  const res = await api.get(`/roadmap/notes/topic/${topicId}`);
+  return res.data;
+};
+
+export const createRoadmapNote = async (data) => {
+  const res = await api.post('/roadmap/notes', data);
+  return res.data;
+};
+
+export const updateRoadmapNote = async (id, data) => {
+  const res = await api.put(`/roadmap/notes/${id}`, data);
+  return res.data;
+};
+
+export const deleteRoadmapNote = async (id) => {
+  const res = await api.delete(`/roadmap/notes/${id}`);
+  return res.data;
+};
+
 export default api;

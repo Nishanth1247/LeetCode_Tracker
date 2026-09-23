@@ -75,6 +75,24 @@ async function testConnection() {
       `);
     }
 
+    // Ensure roadmap_notes table exists (V14.5)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS roadmap_notes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        problem_slug VARCHAR(150) NULL,
+        topic_id VARCHAR(150) NULL,
+        note_type ENUM('UNDERSTANDING', 'APPROACH', 'MISTAKE', 'KEY_POINT', 'GENERAL') NOT NULL DEFAULT 'GENERAL',
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user (user_id),
+        INDEX idx_user_problem (user_id, problem_slug),
+        INDEX idx_user_topic (user_id, topic_id)
+      )
+    `);
+
     connection.release();
     return true;
   } catch (error) {
