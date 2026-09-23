@@ -293,4 +293,10 @@ export const getPracticeSuggestions = async () => {
   return res.data;
 };
 
+// DSA Journey Roadmap helper (V14)
+export const getMyRoadmapProgress = async () => {
+  const res = await api.get('/roadmap/me');
+  return res.data;
+};
+
 export default api;

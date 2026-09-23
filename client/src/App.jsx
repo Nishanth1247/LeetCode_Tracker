@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MemberDashboard from './pages/MemberDashboard';
 import MemberTasks from './pages/MemberTasks';
+import DSAJourney from './pages/DSAJourney';
 import AdminDashboard from './pages/AdminDashboard';
 import Leaderboard from './pages/Leaderboard';
 import Analytics from './pages/Analytics';
@@ -66,6 +67,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <MemberTasks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/member/roadmap"
+            element={
+              <ProtectedRoute>
+                <DSAJourney />
               </ProtectedRoute>
             }
           />
