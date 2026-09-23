@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyLeetCodeStats,
@@ -10,6 +11,7 @@ import {
   getMyChallenges,
   getChallengeProgress,
   getPracticeSuggestions,
+  getMyRoadmapProgress,
 } from '../services/api';
 
 const MemberDashboard = () => {
@@ -50,6 +52,11 @@ const MemberDashboard = () => {
   const [isLeaderUser, setIsLeaderUser] = useState(false);
   const [tasksLoading, setTasksLoading] = useState(false);
 
+  // DSA Journey Roadmap state (V14.2)
+  const [roadmapInfo, setRoadmapInfo] = useState(null);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const navigate = useNavigate();
+
   // Handle ESC key for Sync Notice modal
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -66,7 +73,38 @@ const MemberDashboard = () => {
     fetchGoalsAndPerformance();
     fetchTodaysFocus();
     fetchSuggestions();
+    fetchRoadmapData();
   }, []);
+
+  const fetchRoadmapData = async () => {
+    try {
+      setRoadmapLoading(true);
+      const res = await getMyRoadmapProgress();
+      if (res.success && res.data) {
+        // Compute next incomplete problem inside current topic
+        let nextProb = null;
+        const currentTId = res.data.currentTopic?.id;
+        if (currentTId && res.data.stages) {
+          for (const stage of res.data.stages) {
+            for (const topic of stage.topics) {
+              if (topic.id === currentTId) {
+                nextProb = topic.problems.find((p) => !p.completed) || null;
+                break;
+              }
+            }
+          }
+        }
+        setRoadmapInfo({
+          ...res.data,
+          nextProblem: nextProb,
+        });
+      }
+    } catch (err) {
+      console.error('Error loading roadmap data:', err);
+    } finally {
+      setRoadmapLoading(false);
+    }
+  };
 
   const fetchSuggestions = async () => {
     try {
@@ -415,6 +453,75 @@ const MemberDashboard = () => {
               )}
             </div>
           </div>
+
+          {/* ============================================================
+              DSA JOURNEY (V14.2 MEMBER ROADMAP)
+             ============================================================ */}
+          {roadmapInfo && (
+            <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
+              <div className="card-header" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                    DSA Journey
+                  </h2>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>
+                    {roadmapInfo.overall.completed} / {roadmapInfo.overall.total} problems ({roadmapInfo.overall.percentage}%)
+                  </span>
+                </div>
+                <p className="welcome-subtitle" style={{ marginTop: '0.2rem' }}>
+                  Your continuous learning roadmap from beginner to interview-ready.
+                </p>
+              </div>
+              <div className="card-body">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                      Current Topic: {roadmapInfo.currentTopic?.title || 'Arrays'}
+                    </span>
+                    {roadmapInfo.nextProblem ? (
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text)' }}>
+                        Next Problem: {roadmapInfo.nextProblem.title} ({roadmapInfo.nextProblem.difficulty})
+                      </h4>
+                    ) : (
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#059669' }}>
+                        All topic problems completed!
+                      </h4>
+                    )}
+                    <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                      Topic Progress: {roadmapInfo.currentTopic?.completed || 0} / {roadmapInfo.currentTopic?.total || 0} problems
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    {roadmapInfo.nextProblem ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => navigate(`/member/roadmap/problem/${roadmapInfo.nextProblem.slug}`)}
+                        style={{ fontWeight: 600, padding: '0.55rem 1.1rem', cursor: 'pointer' }}
+                      >
+                        Continue Practice
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => navigate('/member/roadmap')}
+                        style={{ fontWeight: 600, padding: '0.55rem 1.1rem', cursor: 'pointer' }}
+                      >
+                        Continue Journey
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => navigate('/member/roadmap')}
+                      style={{ fontWeight: 600, padding: '0.55rem 1.1rem', cursor: 'pointer' }}
+                    >
+                      View Journey
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ============================================================
               PRACTICE SUGGESTIONS (FOR MEMBERS)
