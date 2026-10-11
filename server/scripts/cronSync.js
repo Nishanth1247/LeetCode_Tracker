@@ -8,7 +8,7 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 require('dotenv').config(); // fallback to current dir
 
-const { testConnection } = require('../config/db');
+const { pool, testConnection } = require('../config/db');
 const { syncAllConnectedMembers } = require('../services/autoSyncService');
 
 async function runCronSync() {
@@ -17,30 +17,54 @@ async function runCronSync() {
   console.log(`[RenderCron] Timestamp: ${new Date().toISOString()} | IST: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}`);
   console.log('====================================================');
 
-  const dbOk = await testConnection();
+  let dbOk = false;
+  try {
+    dbOk = await testConnection();
+  } catch (err) {
+    console.error('[RenderCron] Database initialization error:', err.message);
+  }
+
   if (!dbOk) {
-    console.error('[RenderCron] Database connection failed. Aborting.');
+    console.error('[RenderCron] Database connection failed. Aborting with exit code 1.');
+    try {
+      await pool.end();
+    } catch (_) {}
     process.exit(1);
   }
 
+  let exitCode = 0;
   try {
     const result = await syncAllConnectedMembers('CRON_MIDNIGHT');
-    console.log('====================================================');
-    console.log('[RenderCron] Sync Run Completed Successfully:');
-    console.log(`- Attempted: ${result.attempted}`);
-    console.log(`- Succeeded: ${result.successful}`);
-    console.log(`- Failed: ${result.failed}`);
-    if (result.failedMembers && result.failedMembers.length > 0) {
-      console.log('- Failed members summary:');
-      result.failedMembers.forEach((m) => {
-        console.log(`  * Member ${m.name} (@${m.leetcodeUsername}): ${m.error}`);
-      });
+
+    if (result.skipped) {
+      console.log('====================================================');
+      console.log(`[RenderCron] Sync was skipped (${result.reason || 'another sync job in progress'}).`);
+      console.log('====================================================');
+    } else {
+      console.log('====================================================');
+      console.log('[RenderCron] Sync Run Completed Successfully:');
+      console.log(`- Attempted: ${result.attempted}`);
+      console.log(`- Succeeded: ${result.successful}`);
+      console.log(`- Failed: ${result.failed}`);
+      if (result.failedMembers && result.failedMembers.length > 0) {
+        console.log('- Failed members summary:');
+        result.failedMembers.forEach((m) => {
+          console.log(`  * Member ${m.name} (@${m.leetcodeUsername}): ${m.error}`);
+        });
+      }
+      console.log('====================================================');
     }
-    console.log('====================================================');
-    process.exit(0);
   } catch (err) {
     console.error('[RenderCron] Fatal error during sync job:', err.message);
-    process.exit(1);
+    exitCode = 1;
+  } finally {
+    try {
+      await pool.end();
+      console.log('[RenderCron] Database pool closed cleanly.');
+    } catch (closeErr) {
+      console.error('[RenderCron] Error closing pool:', closeErr.message);
+    }
+    process.exit(exitCode);
   }
 }
 

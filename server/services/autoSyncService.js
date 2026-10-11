@@ -268,11 +268,32 @@ async function syncSingleMember(user) {
 /**
  * Main batch sync function: processes connected MEMBER users.
  * Supports triggerType and optional filter (e.g. onlyFailed: true).
+ * Protected by both in-process flag AND MySQL advisory lock for cross-process mutual exclusion.
  */
 async function syncAllConnectedMembers(triggerType = 'SCHEDULED_HOURLY', options = {}) {
+  // 1. In-process overlap protection
   if (syncStatus.isSyncing) {
     console.log(`[AutoSync] Sync already in progress (${syncStatus.triggerType}), skipping concurrent request.`);
-    return { ...syncStatus, skipped: true };
+    return { ...syncStatus, skipped: true, reason: 'In-process sync already running' };
+  }
+
+  // 2. Cross-process overlap protection via MySQL advisory lock
+  let lockConn = null;
+  let lockAcquired = false;
+  try {
+    lockConn = await pool.getConnection();
+    const [lockRows] = await lockConn.query("SELECT GET_LOCK('leetcode_sync_job_lock', 0) as acquired");
+    lockAcquired = lockRows[0]?.acquired === 1;
+
+    if (!lockAcquired) {
+      console.log(`[AutoSync] Cross-process lock held for leetcode_sync_job_lock. Skipping ${triggerType}.`);
+      lockConn.release();
+      return { ...syncStatus, skipped: true, reason: 'Cross-process MySQL lock held by another process' };
+    }
+  } catch (lockErr) {
+    console.error('[AutoSync] Error acquiring cross-process lock:', lockErr.message);
+    if (lockConn) lockConn.release();
+    return { ...syncStatus, skipped: true, reason: 'Lock acquisition failure' };
   }
 
   syncStatus.isSyncing = true;
@@ -302,8 +323,11 @@ async function syncAllConnectedMembers(triggerType = 'SCHEDULED_HOURLY', options
     `;
     const params = [];
 
+    // For retry, only retry transient errors (skip permanent 404 User Not Found or 400 Invalid)
     if (options.onlyFailed) {
-      query += ` AND leetcode_sync_error IS NOT NULL`;
+      query += ` AND leetcode_sync_error IS NOT NULL 
+                 AND leetcode_sync_error NOT LIKE '%404%' 
+                 AND leetcode_sync_error NOT LIKE '%400%'`;
     }
 
     const [members] = await pool.query(query, params);
@@ -386,6 +410,16 @@ async function syncAllConnectedMembers(triggerType = 'SCHEDULED_HOURLY', options
     }
 
     return syncStatus;
+  } finally {
+    if (lockAcquired && lockConn) {
+      try {
+        await lockConn.query("SELECT RELEASE_LOCK('leetcode_sync_job_lock')");
+      } catch (_) {}
+    }
+    if (lockConn) {
+      lockConn.release();
+    }
+    syncStatus.isSyncing = false;
   }
 }
 
