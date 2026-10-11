@@ -364,11 +364,19 @@ exports.getSyncStatus = async (req, res) => {
       success: true,
       data: {
         status: status.isSyncing ? 'Syncing' : 'Active',
-        frequency: 'Every 1 hour',
+        isSyncing: status.isSyncing,
+        currentMember: status.currentMember,
+        frequency: 'Hourly + 12:00 AM IST Mandatory Sync',
         lastRun: status.lastRun,
+        lastRunStarted: status.lastRunStarted,
+        lastRunFinished: status.lastRunFinished,
+        nextScheduledMidnight: status.nextScheduledMidnight,
+        nextScheduledMidnightIso: status.nextScheduledMidnightIso,
         attempted: status.attempted,
         successful: status.successful,
         failed: status.failed,
+        failedMembers: status.failedMembers || [],
+        connectedMembers: status.connectedMembers || 0,
       },
     });
   } catch (error) {
@@ -384,7 +392,7 @@ exports.getSyncStatus = async (req, res) => {
 exports.triggerManualSync = async (req, res) => {
   try {
     const autoSyncService = require('../services/autoSyncService');
-    const result = await autoSyncService.syncAllConnectedMembers();
+    const result = await autoSyncService.syncAllConnectedMembers('MANUAL_ADMIN');
 
     return res.status(200).json({
       success: true,
@@ -399,3 +407,24 @@ exports.triggerManualSync = async (req, res) => {
     });
   }
 };
+
+// ADMIN ONLY: Retry members whose previous sync failed
+exports.retryFailedSync = async (req, res) => {
+  try {
+    const autoSyncService = require('../services/autoSyncService');
+    const result = await autoSyncService.retryFailedMembers();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Retry batch executed for failed members.',
+      data: result,
+    });
+  } catch (error) {
+    console.error('retryFailedSync error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retry failed members.',
+    });
+  }
+};
+

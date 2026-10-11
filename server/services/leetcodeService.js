@@ -12,7 +12,7 @@ async function getLeetCodeStats(username) {
     throw err;
   }
 
-  const cleanUsername = username.trim();
+  const cleanUsername = username.trim().replace(/^@+/, '');
 
   if (!/^[a-zA-Z0-9_-]+$/.test(cleanUsername)) {
     const err = new Error('LeetCode username contains invalid characters.');
@@ -60,6 +60,7 @@ async function getLeetCodeStats(username) {
     if (!data || !data.matchedUser) {
       const err = new Error('LeetCode user not found');
       err.statusCode = 404;
+      err.isNotFound = true;
       throw err;
     }
 
@@ -140,7 +141,7 @@ async function getRecentLeetCodeActivity(username) {
     throw err;
   }
 
-  const cleanUsername = username.trim();
+  const cleanUsername = username.trim().replace(/^@+/, '');
 
   if (!/^[a-zA-Z0-9_-]+$/.test(cleanUsername)) {
     const err = new Error('LeetCode username contains invalid characters.');
@@ -257,7 +258,7 @@ async function getAcceptedSubmissionHistory(username) {
     throw err;
   }
 
-  const cleanUsername = username.trim();
+  const cleanUsername = username.trim().replace(/^@+/, '');
 
   if (!/^[a-zA-Z0-9_-]+$/.test(cleanUsername)) {
     const err = new Error('LeetCode username contains invalid characters.');

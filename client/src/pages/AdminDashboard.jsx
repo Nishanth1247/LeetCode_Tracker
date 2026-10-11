@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAdminDashboardOverview } from '../services/api';
+import { getAdminDashboardOverview, retryFailedSync } from '../services/api';
 
 const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryLoading, setRetryLoading] = useState(false);
+  const [retryMessage, setRetryMessage] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -24,6 +26,21 @@ const AdminDashboard = () => {
       setError(err.response?.data?.message || 'Failed to load Admin Dashboard overview.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    try {
+      setRetryLoading(true);
+      setRetryMessage(null);
+      const res = await retryFailedSync();
+      setRetryMessage(res.message || 'Retry batch executed.');
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Retry failed sync error:', err);
+      setRetryMessage(err.response?.data?.message || 'Failed to retry sync.');
+    } finally {
+      setRetryLoading(false);
     }
   };
 
@@ -303,14 +320,20 @@ const AdminDashboard = () => {
           <div className="card-body">
             <div className="info-row">
               <span className="info-label">Scheduler Status</span>
-              <span className="info-value">ENABLED (Server-side)</span>
+              <span className="info-value">ENABLED (Asia/Kolkata)</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Next Midnight Sync</span>
+              <span className="info-value" style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                {sync?.nextScheduledMidnight || '12:00 AM Asia/Kolkata'}
+              </span>
             </div>
             <div className="info-row">
               <span className="info-label">Sync Interval</span>
-              <span className="info-value">{sync?.frequency || 'Every 1 hour'}</span>
+              <span className="info-value">{sync?.frequency || 'Hourly + 12:00 AM IST Mandatory'}</span>
             </div>
             <div className="info-row">
-              <span className="info-label">Last Run</span>
+              <span className="info-label">Last Run Finished</span>
               <span className="info-value">{formatDateTime(sync?.lastRun)}</span>
             </div>
             <div className="info-row">
@@ -328,6 +351,57 @@ const AdminDashboard = () => {
               <span className="info-value" style={{ color: sync?.failed > 0 ? 'var(--status-hard)' : 'var(--text)' }}>
                 {sync?.failed ?? 0}
               </span>
+            </div>
+
+            {/* Retry Failed Action & Failed Members Details */}
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {sync?.isSyncing ? 'Sync currently running...' : sync?.failed > 0 ? `${sync.failed} member(s) failed in last run` : 'All connected members synced'}
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleRetryFailed}
+                  disabled={retryLoading || sync?.isSyncing}
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '0.35rem 0.85rem',
+                    width: 'auto',
+                    cursor: (retryLoading || sync?.isSyncing) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {retryLoading ? 'Retrying...' : 'Retry Failed Members ↻'}
+                </button>
+              </div>
+
+              {retryMessage && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--primary)' }}>
+                  {retryMessage}
+                </div>
+              )}
+
+              {sync?.failedMembers && sync.failedMembers.length > 0 && (
+                <div
+                  style={{
+                    marginTop: '0.85rem',
+                    padding: '0.75rem',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                  }}
+                >
+                  <strong style={{ fontSize: '0.82rem', color: '#ef4444', display: 'block', marginBottom: '0.25rem' }}>
+                    Failed Members:
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: 'var(--text)' }}>
+                    {sync.failedMembers.map((fm) => (
+                      <li key={fm.id} style={{ marginBottom: '0.2rem' }}>
+                        <strong>{fm.name}</strong> (@{fm.leetcodeUsername}): {fm.error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -362,6 +436,7 @@ const AdminDashboard = () => {
                     <th>Current Streak</th>
                     <th>Activity Status</th>
                     <th>Last Activity</th>
+                    <th>Last Attempted</th>
                     <th>Last Synced</th>
                   </tr>
                 </thead>
@@ -371,7 +446,14 @@ const AdminDashboard = () => {
                       <td className="font-semibold">{m.name}</td>
                       <td>
                         {m.leetcodeUsername ? (
-                          <span className="username-tag">@{m.leetcodeUsername}</span>
+                          <div>
+                            <span className="username-tag">@{m.leetcodeUsername}</span>
+                            {m.syncError && (
+                              <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.2rem' }}>
+                                ⚠️ {m.syncError}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="not-connected-tag">Not connected</span>
                         )}
@@ -386,6 +468,7 @@ const AdminDashboard = () => {
                       </td>
                       <td>{renderStatusBadge(m.activityStatus)}</td>
                       <td className="sync-time">{formatDate(m.lastActivity)}</td>
+                      <td className="sync-time">{formatDateTime(m.lastAttemptedSync)}</td>
                       <td className="sync-time">{formatDateTime(m.lastSynced)}</td>
                     </tr>
                   ))}

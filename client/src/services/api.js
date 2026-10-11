@@ -341,4 +341,16 @@ export const deleteRoadmapNote = async (id) => {
   return res.data;
 };
 
+// V15 Repeat Solves & Sync Health helpers
+export const getAdminRepeatSolves = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const res = await api.get(`/admin/repeat-solves${query ? `?${query}` : ''}`);
+  return res.data;
+};
+
+export const retryFailedSync = async () => {
+  const res = await api.post('/admin/sync/retry-failed');
+  return res.data;
+};
+
 export default api;

@@ -29,6 +29,7 @@ import AdminTeamPerformance from './pages/AdminTeamPerformance';
 import AdminMemberPerformance from './pages/AdminMemberPerformance';
 import AdminMemberPerformanceDetail from './pages/AdminMemberPerformanceDetail';
 import AdminLanguageAnalytics from './pages/AdminLanguageAnalytics';
+import RepeatSolves from './pages/RepeatSolves';
 
 // Root redirect handler based on role
 const HomeRedirect = () => {
@@ -215,6 +216,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminLanguageAnalytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/repeat-solves"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <RepeatSolves />
               </ProtectedRoute>
             }
           />

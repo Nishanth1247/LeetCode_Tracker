@@ -149,6 +149,8 @@ exports.getAdminDashboard = async (req, res) => {
         u.leetcode_username as leetcodeUsername,
         u.leetcode_total_solved as leetcodeTotalSolved,
         u.leetcode_last_synced as leetcodeLastSynced,
+        u.leetcode_last_attempted_sync as leetcodeLastAttemptedSync,
+        u.leetcode_sync_error as leetcodeSyncError,
         u.leetcode_last_activity as leetcodeLastActivity
       FROM users u
       WHERE u.role = 'MEMBER'
@@ -208,6 +210,8 @@ exports.getAdminDashboard = async (req, res) => {
         currentStreak,
         lastActivity: m.leetcodeLastActivity,
         lastSynced: m.leetcodeLastSynced,
+        lastAttemptedSync: m.leetcodeLastAttemptedSync,
+        syncError: m.leetcodeSyncError,
         activityStatus,
       };
     });
@@ -247,11 +251,18 @@ exports.getAdminDashboard = async (req, res) => {
         sync: {
           enabled: true,
           status: syncHealth.isSyncing ? 'Syncing' : 'Active',
-          frequency: 'Every 1 hour',
+          isSyncing: syncHealth.isSyncing,
+          currentMember: syncHealth.currentMember,
+          frequency: 'Hourly + 12:00 AM IST Mandatory Sync',
           lastRun: syncHealth.lastRun,
+          lastRunStarted: syncHealth.lastRunStarted,
+          lastRunFinished: syncHealth.lastRunFinished,
+          nextScheduledMidnight: syncHealth.nextScheduledMidnight,
+          nextScheduledMidnightIso: syncHealth.nextScheduledMidnightIso,
           attempted: syncHealth.attempted,
           successful: syncHealth.successful,
           failed: syncHealth.failed,
+          failedMembers: syncHealth.failedMembers || [],
           connectedMembers: parseInt(memberStats.connectedMembers, 10) || 0,
         },
         recentActivity: recentSubmissions.map((s) => ({

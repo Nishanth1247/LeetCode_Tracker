@@ -104,6 +104,13 @@ const Navbar = () => {
                     Language Analytics
                   </Link>
                   <Link
+                    to="/admin/repeat-solves"
+                    className={`nav-item ${location.pathname.startsWith('/admin/repeat-solves') ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    Repeat Solves
+                  </Link>
+                  <Link
                     to="/admin/users"
                     className={`nav-item ${location.pathname.startsWith('/admin/users') ? 'active' : ''}`}
                     onClick={closeMenu}

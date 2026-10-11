@@ -5,6 +5,7 @@ const adminUserController = require('../controllers/adminUserController');
 const adminDashboardController = require('../controllers/adminDashboardController');
 const adminPerformanceController = require('../controllers/adminPerformanceController');
 const adminLanguageController = require('../controllers/adminLanguageController');
+const adminRepeatSolveController = require('../controllers/adminRepeatSolveController');
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 
 // ADMIN ONLY endpoint for Dashboard 2.0 aggregated overview
@@ -17,6 +18,9 @@ router.get('/member-performance/:userId', verifyToken, requireAdmin, adminPerfor
 
 // ADMIN ONLY endpoint for Member Language Analytics (V12.1)
 router.get('/language-analytics/:userId', verifyToken, requireAdmin, adminLanguageController.getAdminMemberLanguageAnalytics);
+
+// ADMIN ONLY endpoint for Repeat Solves Detection (V15)
+router.get('/repeat-solves', verifyToken, requireAdmin, adminRepeatSolveController.getRepeatSolves);
 
 // ADMIN ONLY endpoints for User Management
 router.get('/users', verifyToken, requireAdmin, adminUserController.getAdminUsers);
@@ -34,5 +38,6 @@ router.get('/streaks/:userId', verifyToken, requireAdmin, adminSubmissionControl
 // ADMIN ONLY endpoints for automatic sync status & testing
 router.get('/sync-status', verifyToken, requireAdmin, adminSubmissionController.getSyncStatus);
 router.post('/trigger-sync', verifyToken, requireAdmin, adminSubmissionController.triggerManualSync);
+router.post('/sync/retry-failed', verifyToken, requireAdmin, adminSubmissionController.retryFailedSync);
 
 module.exports = router;

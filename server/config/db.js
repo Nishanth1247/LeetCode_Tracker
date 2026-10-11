@@ -111,6 +111,49 @@ async function testConnection() {
       )
     `);
 
+    // V15: Check & Add leetcode_last_attempted_sync column to users table if missing
+    const [attemptedCols] = await connection.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'leetcode_last_attempted_sync'
+    `);
+    if (attemptedCols.length === 0) {
+      await connection.query(`
+        ALTER TABLE users 
+        ADD COLUMN leetcode_last_attempted_sync DATETIME NULL DEFAULT NULL
+      `);
+    }
+
+    // V15: Check & Add leetcode_sync_error column to users table if missing
+    const [syncErrCols] = await connection.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'leetcode_sync_error'
+    `);
+    if (syncErrCols.length === 0) {
+      await connection.query(`
+        ALTER TABLE users 
+        ADD COLUMN leetcode_sync_error VARCHAR(255) NULL DEFAULT NULL
+      `);
+    }
+
+    // V15: Ensure sync_job_runs table exists for reliable sync logging
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS sync_job_runs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        trigger_type ENUM('CRON_MIDNIGHT', 'SCHEDULED_HOURLY', 'CHANGE_DETECTION', 'MANUAL_ADMIN', 'RETRY_FAILED') NOT NULL,
+        status ENUM('RUNNING', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'RUNNING',
+        started_at DATETIME NOT NULL,
+        finished_at DATETIME NULL,
+        members_attempted INT NOT NULL DEFAULT 0,
+        members_succeeded INT NOT NULL DEFAULT 0,
+        members_failed INT NOT NULL DEFAULT 0,
+        error_summary TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_started_at (started_at)
+      )
+    `);
+
     connection.release();
     return true;
   } catch (error) {

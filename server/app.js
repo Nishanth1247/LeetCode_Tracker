@@ -15,6 +15,7 @@ const goalRoutes = require('./routes/goalRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const roadmapRoutes = require('./routes/roadmapRoutes');
 const roadmapNotesRoutes = require('./routes/roadmapNotesRoutes');
+const syncRoutes = require('./routes/syncRoutes');
 const { testConnection } = require('./config/db');
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/goals', goalRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/roadmap/notes', roadmapNotesRoutes);
 app.use('/api/roadmap', roadmapRoutes);
+app.use('/api/sync', syncRoutes);
 
 // 404 Not Found Handler
 app.use((req, res) => {
